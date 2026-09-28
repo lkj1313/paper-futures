@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import type { Env } from '../config/env.js';
 import { UsersModule } from '../users/users.module.js';
+import { WalletModule } from '../wallet/wallet.module.js';
 import { AuthController } from './auth.controller.js';
 import { JwtAuthGuard } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
@@ -15,6 +16,7 @@ type ExpiresIn = Exclude<NonNullable<JwtSignOptions['expiresIn']>, number>;
 @Module({
   imports: [
     UsersModule,
+    WalletModule,
     // 비밀키를 ConfigService에서 받아와야 하므로 registerAsync를 쓴다
     JwtModule.registerAsync({
       inject: [ConfigService],

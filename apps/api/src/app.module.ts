@@ -13,6 +13,7 @@ import { validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
+import { WalletModule } from './wallet/wallet.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RedisModule } from './redis/redis.module.js';
     RedisModule,
     HealthModule,
     AuthModule,
+    WalletModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

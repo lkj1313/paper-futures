@@ -16,6 +16,38 @@ model User {
   id           String   @id @default(uuid(7)) @db.Uuid
   email        String   @unique
   passwordHash String
+  wallet       Wallet?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+/// 사용자당 하나. 모의거래소라 USDT 한 종류만 다룬다
+model Wallet {
+  id        String        @id @default(uuid(7)) @db.Uuid
+  userId    String        @unique @db.Uuid
+  // 돈 기록은 지워지면 안 되므로, 지갑이 있는 사용자는 삭제할 수 없게 막는다
+  user      User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  balance   Decimal       @db.Decimal(20, 8)
+  entries   LedgerEntry[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum LedgerEntryType {
+  SIGNUP_BONUS
+}
+
+/// 원장: 잔고가 바뀔 때마다 한 줄씩 추가만 하고, 수정이나 삭제는 하지 않는다
+model LedgerEntry {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  walletId     String          @db.Uuid
+  wallet       Wallet          @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  type         LedgerEntryType
+  /// 부호 포함 변동 금액 (+10000, -2.5)
+  amount       Decimal         @db.Decimal(20, 8)
+  /// 이 기록 직후의 잔고
+  balanceAfter Decimal         @db.Decimal(20, 8)
+  createdAt    DateTime        @default(now())
+
+  @@index([walletId, createdAt])
 }

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import type { ITXClientDenyList } from '@prisma/client/runtime/client';
 import type { Env } from '../config/env.js';
 import { Prisma, PrismaClient } from '../generated/prisma/client.js';
 
@@ -12,6 +13,15 @@ import { Prisma, PrismaClient } from '../generated/prisma/client.js';
 // 필요한 곳에서만 omit: { passwordHash: false }로 명시해서 꺼낸다.
 const globalOmit = { user: { passwordHash: true } } as const;
 type ClientOptions = Prisma.PrismaClientOptions & { omit: typeof globalOmit };
+
+/**
+ * 트랜잭션 안에서 쓰는 DB 클라이언트.
+ * Prisma 기본 타입은 omit 설정이 빠져 있어서, PrismaService 기준으로 다시 정의한다.
+ */
+export type PrismaTx = Omit<
+  PrismaService,
+  ITXClientDenyList | 'onModuleInit' | 'onModuleDestroy' | 'transaction'
+>;
 
 @Injectable()
 export class PrismaService
@@ -34,5 +44,10 @@ export class PrismaService
 
   async onModuleDestroy() {
     await this.$disconnect();
+  }
+
+  /** 여러 작업을 하나로 묶는다. 중간에 에러가 나면 전부 취소(롤백)된다 */
+  transaction<R>(fn: (tx: PrismaTx) => Promise<R>): Promise<R> {
+    return this.$transaction((tx) => fn(tx as unknown as PrismaTx));
   }
 }

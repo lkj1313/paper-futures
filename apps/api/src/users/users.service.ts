@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { AppException } from '../common/app.exception.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { PrismaService, type PrismaTx } from '../prisma/prisma.service.js';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: { email: string; passwordHash: string }) {
+  /** db를 넘기면 그 트랜잭션 안에서 만든다 */
+  async create(
+    data: { email: string; passwordHash: string },
+    db: PrismaTx = this.prisma,
+  ) {
     try {
-      return await this.prisma.user.create({ data });
+      return await db.user.create({ data });
     } catch (error) {
       // 먼저 조회하고 저장하면 동시 요청 시 둘 다 통과할 수 있으므로,
       // DB의 unique 제약 위반(P2002)을 중복 가입으로 판단한다
