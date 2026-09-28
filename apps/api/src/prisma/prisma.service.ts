@@ -6,11 +6,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { Env } from '../config/env.js';
-import { PrismaClient } from '../generated/prisma/client.js';
+import { Prisma, PrismaClient } from '../generated/prisma/client.js';
+
+// 비밀번호 해시가 실수로 응답에 섞이지 않도록 기본 조회에서 뺀다.
+// 필요한 곳에서만 omit: { passwordHash: false }로 명시해서 꺼낸다.
+const globalOmit = { user: { passwordHash: true } } as const;
+type ClientOptions = Prisma.PrismaClientOptions & { omit: typeof globalOmit };
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient
+  extends PrismaClient<ClientOptions>
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(config: ConfigService<Env, true>) {
@@ -18,6 +23,7 @@ export class PrismaService
       adapter: new PrismaPg({
         connectionString: config.get('DATABASE_URL', { infer: true }),
       }),
+      omit: globalOmit,
     });
   }
 

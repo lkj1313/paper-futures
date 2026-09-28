@@ -15,6 +15,9 @@ export const ERRORS = {
     status: 503,
     message: '서비스를 일시적으로 사용할 수 없습니다.',
   },
+
+  // 인증
+  EMAIL_ALREADY_EXISTS: { status: 409, message: '이미 가입된 이메일입니다.' },
 } as const satisfies Record<string, { status: number; message: string }>;
 
 export type ErrorCode = keyof typeof ERRORS;

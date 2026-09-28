@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
+import { AuthModule } from './auth/auth.module.js';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 import { RequestLoggerMiddleware } from './common/request-logger.middleware.js';
 import { validateEnv } from './config/env.js';
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     }),
     PrismaModule,
     HealthModule,
+    AuthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })
