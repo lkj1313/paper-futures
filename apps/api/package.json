@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "prisma generate && nest start --watch",
+    "dev": "prisma generate && nest start",
     "build": "prisma generate && nest build",
     "deploy": "nest deploy",
     "start": "nest start",
