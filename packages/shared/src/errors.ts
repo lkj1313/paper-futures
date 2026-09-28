@@ -1,0 +1,33 @@
+/**
+ * 에러 카탈로그. 에러 코드마다 HTTP 상태 코드와 기본 메시지를 정한다.
+ * 도메인 에러(인증, 주문 등)는 해당 기능을 만들 때 여기에 추가한다.
+ */
+export const ERRORS = {
+  // 공통
+  VALIDATION_ERROR: { status: 400, message: '요청 값이 올바르지 않습니다.' },
+  BAD_REQUEST: { status: 400, message: '잘못된 요청입니다.' },
+  UNAUTHORIZED: { status: 401, message: '인증이 필요합니다.' },
+  FORBIDDEN: { status: 403, message: '권한이 없습니다.' },
+  NOT_FOUND: { status: 404, message: '대상을 찾을 수 없습니다.' },
+  CONFLICT: { status: 409, message: '이미 존재하는 데이터입니다.' },
+  INTERNAL_ERROR: { status: 500, message: '서버 오류가 발생했습니다.' },
+  SERVICE_UNAVAILABLE: {
+    status: 503,
+    message: '서비스를 일시적으로 사용할 수 없습니다.',
+  },
+} as const satisfies Record<string, { status: number; message: string }>;
+
+export type ErrorCode = keyof typeof ERRORS;
+
+export interface ErrorDetail {
+  path: string;
+  message: string;
+}
+
+/** API가 실패했을 때 항상 이 형태로 응답한다. */
+export interface ErrorResponse {
+  statusCode: number;
+  code: ErrorCode;
+  message: string;
+  details?: ErrorDetail[];
+}
