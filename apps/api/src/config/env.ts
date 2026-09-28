@@ -8,6 +8,11 @@ const envSchema = z.object({
   WEB_ORIGIN: z.url().default('http://localhost:5173'),
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
+  JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_ACCESS_EXPIRES_IN: z
+    .string()
+    .regex(/^\d+[smhd]$/, '15m, 1h 같은 형식이어야 합니다.')
+    .default('15m'),
 });
 
 export type Env = z.infer<typeof envSchema>;

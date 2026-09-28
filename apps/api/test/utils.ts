@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
@@ -27,4 +28,18 @@ export async function resetDatabase(app: INestApplication) {
 
   const names = tables.map((t) => `"public"."${t.tablename}"`).join(', ');
   await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${names} CASCADE`);
+}
+
+/** 가입 후 로그인해서 accessToken을 돌려준다 */
+export async function signupAndLogin(
+  app: INestApplication,
+  email = 'user@test.com',
+  password = 'password123',
+): Promise<string> {
+  const server = app.getHttpServer();
+  await request(server).post('/api/auth/signup').send({ email, password });
+  const res = await request(server)
+    .post('/api/auth/login')
+    .send({ email, password });
+  return res.body.accessToken;
 }

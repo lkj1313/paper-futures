@@ -22,4 +22,16 @@ export class UsersService {
       throw error;
     }
   }
+
+  findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  /** 로그인 검증용. 비밀번호 해시를 포함해서 가져온다 */
+  findByEmailWithPassword(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      omit: { passwordHash: false },
+    });
+  }
 }
