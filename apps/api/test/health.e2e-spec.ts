@@ -54,4 +54,13 @@ describe('health, 공통 에러 응답 (e2e)', () => {
         });
       });
   });
+
+  it('개발/테스트 환경에서는 OpenAPI 문서를 제공한다', () => {
+    return request(app.getHttpServer())
+      .get('/api/docs-json')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.paths).toHaveProperty('/api/health');
+      });
+  });
 });
