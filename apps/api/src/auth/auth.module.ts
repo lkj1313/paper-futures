@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { JwtAuthGuard } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
+import { RefreshTokenService } from './refresh-token.service.js';
 
 // '15m' 같은 형식만 받는 타입. 형식은 환경변수 검증(env.ts)에서 이미 확인했다
 type ExpiresIn = Exclude<NonNullable<JwtSignOptions['expiresIn']>, number>;
@@ -30,6 +31,7 @@ type ExpiresIn = Exclude<NonNullable<JwtSignOptions['expiresIn']>, number>;
   controllers: [AuthController],
   providers: [
     AuthService,
+    RefreshTokenService,
     // 모든 API에 JwtAuthGuard를 적용한다 (@Public()만 예외)
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],

@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp, resetDatabase, signupAndLogin } from './utils.js';
+import { createTestApp, resetData, signupAndLogin } from './utils.js';
 
 describe('GET /api/users/me (e2e)', () => {
   let app: INestApplication;
@@ -17,7 +17,7 @@ describe('GET /api/users/me (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await resetDatabase(app);
+    await resetData(app);
   });
 
   afterAll(async () => {
@@ -55,7 +55,7 @@ describe('GET /api/users/me (e2e)', () => {
     expect(res.body.code).toBe('UNAUTHORIZED');
   });
 
-  it('만료된 토큰이면 401', async () => {
+  it('만료된 토큰이면 401 TOKEN_EXPIRED (web이 갱신을 시도할 수 있게)', async () => {
     const secret = app
       .get(ConfigService)
       .getOrThrow<string>('JWT_ACCESS_SECRET');
@@ -67,7 +67,7 @@ describe('GET /api/users/me (e2e)', () => {
     const res = await me(expired);
 
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe('UNAUTHORIZED');
+    expect(res.body.code).toBe('TOKEN_EXPIRED');
   });
 
   it('Bearer 형식이 아니면 401', async () => {

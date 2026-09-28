@@ -22,6 +22,11 @@ export const ERRORS = {
     status: 401,
     message: '이메일 또는 비밀번호가 올바르지 않습니다.',
   },
+  TOKEN_EXPIRED: { status: 401, message: '토큰이 만료되었습니다.' },
+  INVALID_REFRESH_TOKEN: {
+    status: 401,
+    message: '다시 로그인해야 합니다.',
+  },
 } as const satisfies Record<string, { status: number; message: string }>;
 
 export type ErrorCode = keyof typeof ERRORS;

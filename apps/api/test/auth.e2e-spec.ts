@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { createTestApp, resetDatabase } from './utils.js';
+import { createTestApp, resetData } from './utils.js';
 
 describe('POST /api/auth/signup (e2e)', () => {
   let app: INestApplication;
@@ -16,7 +16,7 @@ describe('POST /api/auth/signup (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await resetDatabase(app);
+    await resetData(app);
   });
 
   afterAll(async () => {
@@ -101,7 +101,7 @@ describe('POST /api/auth/login (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await resetDatabase(app);
+    await resetData(app);
     await request(app.getHttpServer())
       .post('/api/auth/signup')
       .send({ email: 'a@b.com', password: 'password123' });

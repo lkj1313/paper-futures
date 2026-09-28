@@ -13,11 +13,11 @@ describe('health, 공통 에러 응답 (e2e)', () => {
     await app.close();
   });
 
-  it('서버와 DB가 정상이면 200과 ok를 반환한다', () => {
+  it('서버, DB, Redis가 정상이면 200과 ok를 반환한다', () => {
     return request(app.getHttpServer())
       .get('/api/health')
       .expect(200)
-      .expect({ status: 'ok', db: 'ok' });
+      .expect({ status: 'ok', db: 'ok', redis: 'ok' });
   });
 
   it('/api 아래의 없는 경로는 공통 에러 형식의 404', () => {
