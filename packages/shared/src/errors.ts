@@ -18,6 +18,10 @@ export const ERRORS = {
 
   // 인증
   EMAIL_ALREADY_EXISTS: { status: 409, message: '이미 가입된 이메일입니다.' },
+  INVALID_CREDENTIALS: {
+    status: 401,
+    message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+  },
 } as const satisfies Record<string, { status: number; message: string }>;
 
 export type ErrorCode = keyof typeof ERRORS;

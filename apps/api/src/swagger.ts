@@ -10,6 +10,8 @@ export function setupSwagger(app: INestApplication) {
     .setTitle('Paper Futures API')
     .setDescription('모의 선물거래소 API')
     .setVersion('0.1.0')
+    // 문서 페이지의 Authorize 버튼: 로그인해서 받은 accessToken을 넣는다
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

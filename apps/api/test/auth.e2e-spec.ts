@@ -89,3 +89,70 @@ describe('POST /api/auth/signup (e2e)', () => {
     ]);
   });
 });
+
+describe('POST /api/auth/login (e2e)', () => {
+  let app: INestApplication;
+
+  const login = (body: object) =>
+    request(app.getHttpServer()).post('/api/auth/login').send(body);
+
+  beforeAll(async () => {
+    app = await createTestApp();
+  });
+
+  beforeEach(async () => {
+    await resetDatabase(app);
+    await request(app.getHttpServer())
+      .post('/api/auth/signup')
+      .send({ email: 'a@b.com', password: 'password123' });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('맞는 이메일과 비밀번호면 200과 accessToken을 준다', async () => {
+    const res = await login({ email: 'a@b.com', password: 'password123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ accessToken: expect.any(String) });
+  });
+
+  it('이메일 대소문자와 공백은 가입할 때와 똑같이 정리한다', async () => {
+    const res = await login({ email: ' A@B.com ', password: 'password123' });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('비밀번호가 틀리면 401 INVALID_CREDENTIALS', async () => {
+    const res = await login({ email: 'a@b.com', password: 'wrong-password' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({
+      statusCode: 401,
+      code: 'INVALID_CREDENTIALS',
+      message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+    });
+  });
+
+  it('없는 이메일도 비밀번호가 틀린 경우와 완전히 같은 응답', async () => {
+    const wrongPassword = await login({
+      email: 'a@b.com',
+      password: 'wrong-password',
+    });
+    const unknownEmail = await login({
+      email: 'nobody@b.com',
+      password: 'password123',
+    });
+
+    expect(unknownEmail.status).toBe(wrongPassword.status);
+    expect(unknownEmail.body).toEqual(wrongPassword.body);
+  });
+
+  it('비밀번호가 비어 있으면 400 VALIDATION_ERROR', async () => {
+    const res = await login({ email: 'a@b.com', password: '' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+  });
+});
