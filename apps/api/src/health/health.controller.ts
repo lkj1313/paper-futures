@@ -17,10 +17,10 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
-  @ApiOperation({ summary: '서버와 DB 상태 확인' })
+  @ApiOperation({ summary: '서버, DB, Redis 상태 확인' })
   @ApiOkResponse({ type: HealthResponseDto })
   @ApiServiceUnavailableResponse({
-    description: 'DB에 연결할 수 없음',
+    description: 'DB 또는 Redis에 연결할 수 없음',
     type: ErrorResponseDto,
   })
   check(): Promise<HealthResponseDto> {

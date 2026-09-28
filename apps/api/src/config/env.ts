@@ -13,6 +13,7 @@ const envSchema = z.object({
     .string()
     .regex(/^\d+[smhd]$/, '15m, 1h 같은 형식이어야 합니다.')
     .default('15m'),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
 });
 
 export type Env = z.infer<typeof envSchema>;

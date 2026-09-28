@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { RedisService } from '../src/redis/redis.service.js';
 
 /** main.ts와 같은 설정으로 테스트용 앱을 띄운다 */
 export async function createTestApp(): Promise<INestApplication> {
@@ -17,8 +18,10 @@ export async function createTestApp(): Promise<INestApplication> {
   return app;
 }
 
-/** 마이그레이션 기록을 제외한 모든 테이블을 비운다 */
-export async function resetDatabase(app: INestApplication) {
+/** 테스트 DB의 모든 테이블(마이그레이션 기록 제외)과 테스트용 Redis를 비운다 */
+export async function resetData(app: INestApplication) {
+  await app.get(RedisService).flushdb();
+
   const prisma = app.get(PrismaService);
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables

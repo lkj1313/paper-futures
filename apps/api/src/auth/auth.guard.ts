@@ -4,7 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { AppException } from '../common/app.exception.js';
 import type { AuthenticatedRequest, JwtPayload } from './auth.types.js';
@@ -33,8 +33,12 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       request.user = { id: payload.sub };
-    } catch {
-      // 위조, 만료, 형식 오류 모두 같은 응답
+    } catch (error) {
+      // 만료는 web이 refresh로 갱신할 수 있도록 따로 알려준다
+      if (error instanceof TokenExpiredError) {
+        throw new AppException('TOKEN_EXPIRED');
+      }
+      // 위조, 형식 오류 등
       throw new AppException('UNAUTHORIZED');
     }
     return true;

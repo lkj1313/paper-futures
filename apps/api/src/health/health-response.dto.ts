@@ -6,4 +6,7 @@ export class HealthResponseDto {
 
   @ApiProperty({ example: 'ok' })
   db: 'ok';
+
+  @ApiProperty({ example: 'ok' })
+  redis: 'ok';
 }

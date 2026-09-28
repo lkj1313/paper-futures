@@ -5,8 +5,13 @@ import { AppException } from '../common/app.exception.js';
 import { UsersService } from '../users/users.service.js';
 import type { JwtPayload } from './auth.types.js';
 import type { LoginDto } from './dto/login.dto.js';
-import type { LoginResponseDto } from './dto/login-response.dto.js';
 import type { SignupDto } from './dto/signup.dto.js';
+import { RefreshTokenService } from './refresh-token.service.js';
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -16,6 +21,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
   async signup({ email, password }: SignupDto) {
@@ -23,7 +29,7 @@ export class AuthService {
     return this.usersService.create({ email, passwordHash });
   }
 
-  async login({ email, password }: LoginDto): Promise<LoginResponseDto> {
+  async login({ email, password }: LoginDto): Promise<AuthTokens> {
     const user = await this.usersService.findByEmailWithPassword(email);
 
     // 없는 이메일이어도 비교를 한 번 수행해서, 응답 시간으로 가입 여부를 알 수 없게 한다
@@ -31,7 +37,34 @@ export class AuthService {
     const isValid = await argon2.verify(hash, password);
     if (!user || !isValid) throw new AppException('INVALID_CREDENTIALS');
 
-    const payload: JwtPayload = { sub: user.id };
-    return { accessToken: await this.jwtService.signAsync(payload) };
+    return {
+      accessToken: await this.signAccessToken(user.id),
+      refreshToken: await this.refreshTokenService.issue(user.id),
+    };
+  }
+
+  async refresh(refreshToken: string): Promise<AuthTokens> {
+    const rotated = await this.refreshTokenService.rotate(refreshToken);
+
+    // 토큰은 정상이지만 그사이 사용자가 사라졌을 수 있다
+    const user = await this.usersService.findById(rotated.userId);
+    if (!user) {
+      await this.refreshTokenService.revoke(rotated.refreshToken);
+      throw new AppException('INVALID_REFRESH_TOKEN');
+    }
+
+    return {
+      accessToken: await this.signAccessToken(user.id),
+      refreshToken: rotated.refreshToken,
+    };
+  }
+
+  async logout(refreshToken: string | undefined) {
+    if (refreshToken) await this.refreshTokenService.revoke(refreshToken);
+  }
+
+  private signAccessToken(userId: string) {
+    const payload: JwtPayload = { sub: userId };
+    return this.jwtService.signAsync(payload);
   }
 }

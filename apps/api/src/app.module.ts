@@ -12,6 +12,7 @@ import { RequestLoggerMiddleware } from './common/request-logger.middleware.js';
 import { validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { RedisModule } from './redis/redis.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
       validate: validateEnv,
     }),
     PrismaModule,
+    RedisModule,
     HealthModule,
     AuthModule,
   ],
