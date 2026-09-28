@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import argon2 from 'argon2';
 import { AppException } from '../common/app.exception.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 import { UsersService } from '../users/users.service.js';
+import { WalletService } from '../wallet/wallet.service.js';
 import type { JwtPayload } from './auth.types.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { SignupDto } from './dto/signup.dto.js';
@@ -22,11 +24,20 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly walletService: WalletService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async signup({ email, password }: SignupDto) {
+    // 해싱은 느린 작업이라 트랜잭션을 열기 전에 끝낸다
     const passwordHash = await argon2.hash(password);
-    return this.usersService.create({ email, passwordHash });
+
+    // 사용자, 지갑, 가입 보너스 원장을 하나로 묶는다. 하나라도 실패하면 모두 취소된다
+    return this.prisma.transaction(async (tx) => {
+      const user = await this.usersService.create({ email, passwordHash }, tx);
+      await this.walletService.createWithSignupBonus(user.id, tx);
+      return user;
+    });
   }
 
   async login({ email, password }: LoginDto): Promise<AuthTokens> {
