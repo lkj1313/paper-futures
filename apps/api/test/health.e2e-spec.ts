@@ -4,7 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 
-describe('GET /api/health (e2e)', () => {
+describe('health, 공통 에러 응답 (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -12,7 +12,7 @@ describe('GET /api/health (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication({ logger: false });
     setupApp(app);
     await app.init();
   });
@@ -28,7 +28,30 @@ describe('GET /api/health (e2e)', () => {
       .expect({ status: 'ok', db: 'ok' });
   });
 
-  it('/api prefix 없는 경로는 404', () => {
-    return request(app.getHttpServer()).get('/health').expect(404);
+  it('/api 아래의 없는 경로는 공통 에러 형식의 404', () => {
+    return request(app.getHttpServer())
+      .get('/api/nope')
+      .expect(404)
+      .expect((res) => {
+        expect(res.body).toEqual({
+          statusCode: 404,
+          code: 'NOT_FOUND',
+          message: expect.any(String),
+        });
+      });
+  });
+
+  it('JSON 형식이 깨진 요청은 공통 에러 형식의 400', () => {
+    return request(app.getHttpServer())
+      .post('/api/health')
+      .set('Content-Type', 'application/json')
+      .send('{ broken')
+      .expect(400)
+      .expect((res) => {
+        expect(res.body).toMatchObject({
+          statusCode: 400,
+          code: 'BAD_REQUEST',
+        });
+      });
   });
 });
