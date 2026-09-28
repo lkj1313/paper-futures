@@ -1,20 +1,12 @@
-import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module.js';
-import { setupApp } from '../src/app.setup.js';
+import { createTestApp } from './utils.js';
 
 describe('health, 공통 에러 응답 (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleRef.createNestApplication({ logger: false });
-    setupApp(app);
-    await app.init();
+    app = await createTestApp();
   });
 
   afterAll(async () => {
