@@ -9,8 +9,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch --preserveWatchOutput"
+    "build": "tsc"
   },
   "devDependencies": {
     "typescript": "^6.0.3"
