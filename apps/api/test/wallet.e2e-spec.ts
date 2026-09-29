@@ -41,13 +41,18 @@ describe('지갑 (e2e)', () => {
     expect(user.wallet?.entries[0].balanceAfter.toString()).toBe('10000');
   });
 
-  it('GET /api/wallet: 잔고를 문자열로 준다', async () => {
+  it('GET /api/wallet: 잔고, 사용 중 증거금, 주문 가능 금액을 문자열로 준다', async () => {
     const token = await signupAndLogin(app);
 
     const res = await get('/api/wallet', token);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ asset: 'USDT', balance: '10000' });
+    expect(res.body).toEqual({
+      asset: 'USDT',
+      balance: '10000',
+      usedMargin: '0',
+      availableBalance: '10000',
+    });
   });
 
   it('토큰 없이 지갑을 조회하면 401', async () => {

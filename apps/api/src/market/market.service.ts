@@ -46,6 +46,19 @@ export class MarketService {
     });
   }
 
+  /**
+   * 주문 체결에 쓸 호가. 없거나 오래됐으면 거부한다 (오래된 가격으로 체결하지 않는다)
+   */
+  async getFreshDepth(symbol: MarketSymbol, now = Date.now()) {
+    const depth = await this.getDepth(symbol, now);
+    if (depth.stale) {
+      throw new AppException('MARKET_DATA_UNAVAILABLE', {
+        message: '시세가 지연되고 있어 지금은 주문할 수 없습니다.',
+      });
+    }
+    return depth;
+  }
+
   async getDepth(
     symbol: MarketSymbol,
     now = Date.now(),

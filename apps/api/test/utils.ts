@@ -1,5 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test, type TestingModuleBuilder } from '@nestjs/testing';
+import {
+  type MarketSymbol,
+  marketKey,
+  type OrderBookDepth,
+  type PriceLevel,
+} from '@paper-futures/shared';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
@@ -50,4 +56,17 @@ export async function signupAndLogin(
     .post('/api/auth/login')
     .send({ email, password });
   return res.body.accessToken;
+}
+
+/** market-data 프로세스 대신 테스트용 Redis에 호가를 넣는다 */
+export async function seedDepth(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  book: { bids: PriceLevel[]; asks: PriceLevel[] },
+  receivedAt = Date.now(),
+) {
+  const depth: OrderBookDepth = { ...book, time: receivedAt, receivedAt };
+  await app
+    .get(RedisService)
+    .set(marketKey(symbol, 'depth'), JSON.stringify(depth));
 }

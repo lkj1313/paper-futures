@@ -30,6 +30,44 @@ export class WalletService {
     });
   }
 
+  /**
+   * 지갑 행을 잠근다 (SELECT ... FOR UPDATE). 트랜잭션이 끝날 때까지 같은 사용자의
+   * 다른 주문은 여기서 기다리므로, 잔고 확인과 변경 사이에 끼어들 수 없다.
+   */
+  async lockByUserId(tx: PrismaTx, userId: string) {
+    const [wallet] = await tx.$queryRaw<
+      { id: string; balance: Prisma.Decimal }[]
+    >`
+      SELECT "id", "balance" FROM "Wallet" WHERE "userId" = ${userId}::uuid FOR UPDATE
+    `;
+    if (!wallet) {
+      throw new AppException('NOT_FOUND', {
+        message: '지갑을 찾을 수 없습니다.',
+      });
+    }
+    return wallet;
+  }
+
+  /** 열린 포지션들에 묶인 증거금 합계 */
+  async getUsedMargin(userId: string, db: PrismaTx = this.prisma) {
+    const { _sum } = await db.position.aggregate({
+      where: { userId },
+      _sum: { isolatedMargin: true },
+    });
+    return _sum.isolatedMargin ?? new Prisma.Decimal(0);
+  }
+
+  /** 지갑 잔고, 사용 중 증거금, 주문 가능 금액 */
+  async getSummary(userId: string) {
+    const wallet = await this.getByUserId(userId);
+    const usedMargin = await this.getUsedMargin(userId);
+    return {
+      balance: wallet.balance,
+      usedMargin,
+      availableBalance: wallet.balance.sub(usedMargin),
+    };
+  }
+
   async getByUserId(userId: string) {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) {

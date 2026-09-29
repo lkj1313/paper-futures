@@ -13,12 +13,14 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid(7)) @db.Uuid
-  email        String   @unique
+  id           String     @id @default(uuid(7)) @db.Uuid
+  email        String     @unique
   passwordHash String
   wallet       Wallet?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  positions    Position[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 /// 사용자당 하나. 모의거래소라 USDT 한 종류만 다룬다
@@ -35,6 +37,7 @@ model Wallet {
 
 enum LedgerEntryType {
   SIGNUP_BONUS
+  TRADING_FEE
 }
 
 /// 원장: 잔고가 바뀔 때마다 한 줄씩 추가만 하고, 수정이나 삭제는 하지 않는다
@@ -47,7 +50,69 @@ model LedgerEntry {
   amount       Decimal         @db.Decimal(20, 8)
   /// 이 기록 직후의 잔고
   balanceAfter Decimal         @db.Decimal(20, 8)
+  /// 이 기록을 만든 주문 (수수료, 실현 손익). 가입 보너스처럼 주문과 무관하면 null
+  orderId      String?         @db.Uuid
+  order        Order?          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   createdAt    DateTime        @default(now())
 
   @@index([walletId, createdAt])
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+}
+
+enum OrderStatus {
+  FILLED
+}
+
+enum PositionSide {
+  LONG
+  SHORT
+}
+
+/// 주문 기록. 시장가 주문은 받는 즉시 전부 체결되거나 거부된다 (거부된 주문은 저장하지 않는다)
+model Order {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  userId       String        @db.Uuid
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  symbol       String
+  side         OrderSide
+  type         OrderType
+  status       OrderStatus
+  qty          Decimal       @db.Decimal(20, 8)
+  leverage     Int
+  /// 평균 체결가
+  avgFillPrice Decimal       @db.Decimal(20, 8)
+  fee          Decimal       @db.Decimal(20, 8)
+  /// 포지션을 줄였을 때 확정된 손익 (열거나 늘릴 때는 0)
+  realizedPnl  Decimal       @default(0) @db.Decimal(20, 8)
+  entries      LedgerEntry[]
+  createdAt    DateTime      @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// 지금 열려 있는 포지션. 종목당 하나이고, 완전히 닫히면 삭제된다 (기록은 주문과 원장에 남는다)
+model Position {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  userId         String       @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  symbol         String
+  side           PositionSide
+  qty            Decimal      @db.Decimal(20, 8)
+  /// 평균 진입가
+  entryPrice     Decimal      @db.Decimal(20, 8)
+  leverage       Int
+  /// 이 포지션에 묶인 증거금 (격리 마진)
+  isolatedMargin Decimal      @db.Decimal(20, 8)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, symbol])
 }

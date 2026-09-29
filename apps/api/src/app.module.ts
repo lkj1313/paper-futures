@@ -10,6 +10,7 @@ import { RequestLoggerMiddleware } from './common/request-logger.middleware.js';
 import { AppConfigModule } from './config/app-config.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MarketModule } from './market/market.module.js';
+import { OrdersModule } from './orders/orders.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { WalletModule } from './wallet/wallet.module.js';
@@ -23,6 +24,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     AuthModule,
     WalletModule,
     MarketModule,
+    OrdersModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

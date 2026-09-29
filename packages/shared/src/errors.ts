@@ -28,6 +28,18 @@ export const ERRORS = {
     message: '다시 로그인해야 합니다.',
   },
 
+  // 주문
+  INVALID_ORDER_QTY: {
+    status: 400,
+    message: '주문 수량이 올바르지 않습니다.',
+  },
+  INVALID_LEVERAGE: { status: 400, message: '레버리지가 올바르지 않습니다.' },
+  INSUFFICIENT_MARGIN: { status: 400, message: '주문 가능 금액이 부족합니다.' },
+  INSUFFICIENT_LIQUIDITY: {
+    status: 400,
+    message: '호가가 부족해 주문을 모두 체결할 수 없습니다.',
+  },
+
   // 시세
   MARKET_DATA_UNAVAILABLE: {
     status: 503,
