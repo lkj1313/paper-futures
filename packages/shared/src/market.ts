@@ -40,3 +40,17 @@ export interface OrderBookDepth {
   time: number;
   receivedAt: number;
 }
+
+/** 받은 지 이 시간이 지난 시세는 오래된(stale) 것으로 본다 */
+export const MARKET_DATA_STALE_MS = 5_000;
+
+/**
+ * 시세가 오래됐는지 판단한다. 기준은 Binance 시각이 아니라 우리가 받은 시각(receivedAt)이다.
+ * 한 번도 받은 적 없으면(undefined) 오래된 것으로 본다.
+ */
+export function isStale(
+  receivedAt: number | undefined,
+  now: number = Date.now(),
+): boolean {
+  return receivedAt === undefined || now - receivedAt > MARKET_DATA_STALE_MS;
+}

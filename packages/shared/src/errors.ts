@@ -27,6 +27,12 @@ export const ERRORS = {
     status: 401,
     message: '다시 로그인해야 합니다.',
   },
+
+  // 시세
+  MARKET_DATA_UNAVAILABLE: {
+    status: 503,
+    message: '시세 정보를 아직 받지 못했습니다.',
+  },
 } as const satisfies Record<string, { status: number; message: string }>;
 
 export type ErrorCode = keyof typeof ERRORS;
