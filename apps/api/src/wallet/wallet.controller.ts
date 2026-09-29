@@ -28,11 +28,10 @@ export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
   @Get()
-  @ApiOperation({ summary: '내 지갑 잔고 조회' })
+  @ApiOperation({ summary: '내 지갑 잔고와 주문 가능 금액 조회' })
   @ApiOkResponse({ type: WalletResponseDto })
   async getWallet(@CurrentUser() user: AuthUser): Promise<WalletResponseDto> {
-    const wallet = await this.walletService.getByUserId(user.id);
-    return WalletResponseDto.from(wallet);
+    return WalletResponseDto.from(await this.walletService.getSummary(user.id));
   }
 
   @Get('ledger')
