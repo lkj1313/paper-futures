@@ -33,12 +33,12 @@ export class OrdersController {
   @ApiOperation({
     summary: '시장가 주문',
     description:
-      '호가 기준으로 즉시 체결한다. 지금은 포지션 열기와 늘리기만 지원한다.',
+      '호가 기준으로 즉시 체결한다. 포지션과 같은 방향이면 열기/늘리기, 반대 방향이면 줄이기/닫기.',
   })
   @ApiCreatedResponse({ type: PlaceOrderResponseDto })
   @ApiBadRequestResponse({
     description:
-      'VALIDATION_ERROR, INVALID_ORDER_QTY, INVALID_LEVERAGE, INSUFFICIENT_MARGIN, INSUFFICIENT_LIQUIDITY',
+      'VALIDATION_ERROR, INVALID_ORDER_QTY, INVALID_LEVERAGE, INSUFFICIENT_MARGIN, INSUFFICIENT_LIQUIDITY, POSITION_FLIP_NOT_SUPPORTED, REDUCE_ONLY_REJECTED',
     type: ErrorResponseDto,
   })
   @ApiServiceUnavailableResponse({
@@ -55,7 +55,7 @@ export class OrdersController {
     );
     return {
       order: OrderDto.from(order),
-      position: PositionDto.from(position),
+      position: position && PositionDto.from(position),
     };
   }
 }

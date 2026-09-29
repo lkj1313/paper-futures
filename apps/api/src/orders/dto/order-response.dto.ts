@@ -24,6 +24,7 @@ export class OrderDto {
 
   qty: string;
   leverage: number;
+  reduceOnly: boolean;
   /** 평균 체결가 */
   avgFillPrice: string;
   fee: string;
@@ -40,6 +41,7 @@ export class OrderDto {
       status: order.status,
       qty: order.qty.toString(),
       leverage: order.leverage,
+      reduceOnly: order.reduceOnly,
       avgFillPrice: order.avgFillPrice.toString(),
       fee: order.fee.toString(),
       realizedPnl: order.realizedPnl.toString(),
@@ -75,6 +77,8 @@ export class PositionDto {
 
 export class PlaceOrderResponseDto {
   order: OrderDto;
-  /** 주문 체결 후의 포지션 */
-  position: PositionDto;
+
+  /** 주문 체결 후의 포지션. 포지션을 닫았으면 null */
+  @ApiProperty({ type: PositionDto, nullable: true })
+  position: PositionDto | null;
 }

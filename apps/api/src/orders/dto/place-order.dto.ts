@@ -1,7 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { type MarketSymbol, OrderSide, SYMBOLS } from '@paper-futures/shared';
 import { Transform } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class PlaceOrderDto {
   @ApiProperty({ enum: SYMBOLS, example: 'BTCUSDT' })
@@ -32,4 +40,12 @@ export class PlaceOrderDto {
   @Min(1, { message: '레버리지는 1 이상이어야 합니다.' })
   @Max(125, { message: '레버리지는 125 이하여야 합니다.' })
   leverage: number = 10;
+
+  /**
+   * 포지션을 줄이기만 하는 주문. 줄일 반대 방향 포지션이 없거나
+   * 수량이 포지션보다 크면 거부된다 (포지션이 새로 열리거나 늘어나는 것을 막는다)
+   */
+  @IsOptional()
+  @IsBoolean({ message: 'reduceOnly는 true 또는 false여야 합니다.' })
+  reduceOnly: boolean = false;
 }

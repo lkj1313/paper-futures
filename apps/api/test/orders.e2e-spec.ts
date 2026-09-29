@@ -172,14 +172,6 @@ describe('POST /api/orders 시장가 주문 (e2e)', () => {
     expect(eth.body.code).toBe('MARKET_DATA_UNAVAILABLE');
   });
 
-  it('반대 방향 주문(포지션 줄이기)은 아직 400', async () => {
-    await order({ qty: '0.1' });
-
-    const res = await order({ side: 'SELL', qty: '0.05' });
-
-    expect(res.status).toBe(400);
-  });
-
   it('토큰 없이 주문하면 401', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/orders')
