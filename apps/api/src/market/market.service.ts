@@ -46,6 +46,18 @@ export class MarketService {
     });
   }
 
+  /** 모든 종목의 최신 마크가격을 MGET 한 번으로 읽는다. 받은 적 없으면 undefined */
+  async getMarkPrices(): Promise<
+    Record<MarketSymbol, MarkPriceInfo | undefined>
+  > {
+    const values = await this.redis.mget(
+      ...SYMBOLS.map((s) => marketKey(s, 'mark')),
+    );
+    return Object.fromEntries(
+      SYMBOLS.map((symbol, i) => [symbol, parse<MarkPriceInfo>(values[i])]),
+    ) as Record<MarketSymbol, MarkPriceInfo | undefined>;
+  }
+
   /**
    * 주문 체결에 쓸 호가. 없거나 오래됐으면 거부한다 (오래된 가격으로 체결하지 않는다)
    */

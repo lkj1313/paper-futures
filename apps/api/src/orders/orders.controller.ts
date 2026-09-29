@@ -1,8 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiServiceUnavailableResponse,
   ApiTags,
@@ -16,6 +17,7 @@ import {
   PlaceOrderResponseDto,
   PositionDto,
 } from './dto/order-response.dto.js';
+import { ListOrdersQueryDto, OrderPageDto } from './dto/list-orders.dto.js';
 import { PlaceOrderDto } from './dto/place-order.dto.js';
 import { OrdersService } from './orders.service.js';
 
@@ -28,6 +30,17 @@ import { OrdersService } from './orders.service.js';
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Get()
+  @ApiOperation({ summary: '내 주문 내역, 최신순' })
+  @ApiOkResponse({ type: OrderPageDto })
+  async list(
+    @CurrentUser() user: AuthUser,
+    @Query() query: ListOrdersQueryDto,
+  ): Promise<OrderPageDto> {
+    const { items, nextCursor } = await this.ordersService.list(user.id, query);
+    return { items: items.map((order) => OrderDto.from(order)), nextCursor };
+  }
 
   @Post()
   @ApiOperation({

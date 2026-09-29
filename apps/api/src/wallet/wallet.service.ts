@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { SIGNUP_BONUS_USDT } from '@paper-futures/shared';
 import { AppException } from '../common/app.exception.js';
+import {
+  type CursorPageQueryDto,
+  cursorPageArgs,
+  toCursorPage,
+} from '../common/cursor-page.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { LedgerEntryType } from '../generated/prisma/enums.js';
 import { PrismaService, type PrismaTx } from '../prisma/prisma.service.js';
@@ -78,22 +83,14 @@ export class WalletService {
     return wallet;
   }
 
-  /** 원장을 최신순으로 limit개씩 가져온다. cursor는 이전 페이지의 마지막 기록 id */
-  async listLedger(
-    userId: string,
-    { limit, cursor }: { limit: number; cursor?: string },
-  ) {
+  /** 원장을 최신순으로 limit개씩 가져온다 */
+  async listLedger(userId: string, query: CursorPageQueryDto) {
     const wallet = await this.getByUserId(userId);
-
-    // UUID v7은 생성 시간 순으로 커지므로 id만으로 최신순 정렬과 커서 비교가 된다
+    const page = cursorPageArgs(query);
     const rows = await this.prisma.ledgerEntry.findMany({
-      where: { walletId: wallet.id, ...(cursor && { id: { lt: cursor } }) },
-      orderBy: { id: 'desc' },
-      take: limit + 1, // 하나 더 가져와서 다음 페이지가 있는지 확인한다
+      ...page,
+      where: { ...page.where, walletId: wallet.id },
     });
-
-    const hasMore = rows.length > limit;
-    const items = hasMore ? rows.slice(0, limit) : rows;
-    return { items, nextCursor: hasMore ? items[items.length - 1].id : null };
+    return toCursorPage(rows, query.limit);
   }
 }

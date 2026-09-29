@@ -3,6 +3,7 @@ import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import {
   type MarketSymbol,
   marketKey,
+  type MarkPriceInfo,
   type OrderBookDepth,
   type PriceLevel,
 } from '@paper-futures/shared';
@@ -69,4 +70,24 @@ export async function seedDepth(
   await app
     .get(RedisService)
     .set(marketKey(symbol, 'depth'), JSON.stringify(depth));
+}
+
+/** market-data 프로세스 대신 테스트용 Redis에 마크가격을 넣는다 */
+export async function seedMark(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  markPrice: string,
+  receivedAt = Date.now(),
+) {
+  const mark: MarkPriceInfo = {
+    markPrice,
+    indexPrice: markPrice,
+    fundingRate: '0.0001',
+    nextFundingTime: receivedAt + 60_000,
+    time: receivedAt,
+    receivedAt,
+  };
+  await app
+    .get(RedisService)
+    .set(marketKey(symbol, 'mark'), JSON.stringify(mark));
 }
