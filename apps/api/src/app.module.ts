@@ -11,6 +11,7 @@ import { AppConfigModule } from './config/app-config.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MarketModule } from './market/market.module.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { PositionsModule } from './positions/positions.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { WalletModule } from './wallet/wallet.module.js';
@@ -25,6 +26,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     WalletModule,
     MarketModule,
     OrdersModule,
+    PositionsModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

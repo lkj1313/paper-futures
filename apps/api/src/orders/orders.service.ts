@@ -14,10 +14,12 @@ import {
   tradingFee,
 } from '@paper-futures/shared';
 import { AppException } from '../common/app.exception.js';
+import { cursorPageArgs, toCursorPage } from '../common/cursor-page.js';
 import type { Position, Prisma } from '../generated/prisma/client.js';
 import { MarketService } from '../market/market.service.js';
 import { PrismaService, type PrismaTx } from '../prisma/prisma.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
+import type { ListOrdersQueryDto } from './dto/list-orders.dto.js';
 import type { PlaceOrderDto } from './dto/place-order.dto.js';
 import {
   applyIncrease,
@@ -50,6 +52,20 @@ export class OrdersService {
     private readonly market: MarketService,
     private readonly wallet: WalletService,
   ) {}
+
+  /** 내 주문 내역을 최신순으로 limit개씩 */
+  async list(userId: string, query: ListOrdersQueryDto) {
+    const page = cursorPageArgs(query);
+    const rows = await this.prisma.order.findMany({
+      ...page,
+      where: {
+        ...page.where,
+        userId,
+        ...(query.symbol && { symbol: query.symbol }),
+      },
+    });
+    return toCursorPage(rows, query.limit);
+  }
 
   async placeMarketOrder(userId: string, dto: PlaceOrderDto) {
     const { symbol, side, reduceOnly } = dto;
