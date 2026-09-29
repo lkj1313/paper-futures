@@ -39,6 +39,15 @@ export const ERRORS = {
     status: 400,
     message: '호가가 부족해 주문을 모두 체결할 수 없습니다.',
   },
+  POSITION_FLIP_NOT_SUPPORTED: {
+    status: 400,
+    message:
+      '포지션보다 큰 반대 주문은 지원하지 않습니다. 포지션을 닫은 뒤 다시 주문하세요.',
+  },
+  REDUCE_ONLY_REJECTED: {
+    status: 400,
+    message: '줄일 수 있는 포지션이 없어 reduceOnly 주문을 거부했습니다.',
+  },
 
   // 시세
   MARKET_DATA_UNAVAILABLE: {

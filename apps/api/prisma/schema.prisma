@@ -38,6 +38,7 @@ model Wallet {
 enum LedgerEntryType {
   SIGNUP_BONUS
   TRADING_FEE
+  REALIZED_PNL
 }
 
 /// 원장: 잔고가 바뀔 때마다 한 줄씩 추가만 하고, 수정이나 삭제는 하지 않는다
@@ -87,6 +88,8 @@ model Order {
   status       OrderStatus
   qty          Decimal       @db.Decimal(20, 8)
   leverage     Int
+  /// 포지션을 줄이기만 하는 주문 (포지션이 없거나 같은 방향이면 거부)
+  reduceOnly   Boolean       @default(false)
   /// 평균 체결가
   avgFillPrice Decimal       @db.Decimal(20, 8)
   fee          Decimal       @db.Decimal(20, 8)
