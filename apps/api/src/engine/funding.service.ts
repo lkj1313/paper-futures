@@ -6,6 +6,7 @@ import {
   type MarketSymbol,
   toDecimal,
 } from '@paper-futures/shared';
+import { AccountEventsService } from '../account-events/account-events.service.js';
 import { toDb } from '../common/db-decimal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
@@ -30,6 +31,7 @@ export class FundingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    private readonly events: AccountEventsService,
   ) {}
 
   /**
@@ -43,7 +45,8 @@ export class FundingService {
     const { symbol, fundingRate, markPrice } = input;
     const fundingTime = new Date(input.fundingTime);
 
-    const settled = await this.prisma.transaction(async (tx) => {
+    // 정산한 사용자들. 이미 정산된 회차면 null
+    const settledUserIds = await this.prisma.transaction(async (tx) => {
       // 1. 회차 기록. (종목, 펀딩 시각)이 이미 있으면 정산된 회차라 아무것도 하지 않는다
       const [round] = await tx.fundingRound.createManyAndReturn({
         data: [{ symbol, fundingTime, fundingRate, markPrice }],
@@ -58,7 +61,7 @@ export class FundingService {
         orderBy: { userId: 'asc' },
       });
 
-      let count = 0;
+      const userIds: string[] = [];
       for (const { userId } of holders) {
         const wallet = await this.wallet.lockByUserId(tx, userId);
         // 잠근 뒤 다시 읽는다 (그 사이 주문으로 바뀌었을 수 있다)
@@ -88,16 +91,17 @@ export class FundingService {
           [{ type: 'FUNDING_FEE', amount }],
           { fundingRoundId: round.id },
         );
-        count++;
+        userIds.push(userId);
       }
-      return count;
+      return userIds;
     });
+    if (settledUserIds === null) return null;
 
-    if (settled !== null) {
-      this.logger.log(
-        `펀딩비 정산: ${symbol} ${fundingTime.toISOString()}, 비율 ${fundingRate}, 마크가격 ${markPrice}, 포지션 ${settled}개`,
-      );
-    }
-    return settled;
+    this.logger.log(
+      `펀딩비 정산: ${symbol} ${fundingTime.toISOString()}, 비율 ${fundingRate}, 마크가격 ${markPrice}, 포지션 ${settledUserIds.length}개`,
+    );
+    // 커밋한 뒤에 알린다 (포지션 증거금과 지갑이 바뀜)
+    for (const userId of settledUserIds) await this.events.notify(userId);
+    return settledUserIds.length;
   }
 }

@@ -37,5 +37,7 @@ type ExpiresIn = Exclude<NonNullable<JwtSignOptions['expiresIn']>, number>;
     // 모든 API에 JwtAuthGuard를 적용한다 (@Public()만 예외)
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
+  // 실시간 연결도 같은 설정으로 토큰을 검사한다
+  exports: [JwtModule],
 })
 export class AuthModule {}

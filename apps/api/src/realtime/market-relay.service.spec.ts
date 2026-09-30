@@ -1,6 +1,6 @@
 import type { RedisService } from '../redis/redis.service.js';
 import { MarketRelayService } from './market-relay.service.js';
-import type { MarketGateway } from './market.gateway.js';
+import type { RealtimeGateway } from './realtime.gateway.js';
 
 const trade = (price: string) =>
   JSON.stringify({ price, qty: '0.01', time: 1, receivedAt: 1 });
@@ -15,7 +15,7 @@ describe('MarketRelayService', () => {
   };
   const relay = new MarketRelayService(
     {} as RedisService,
-    gateway as unknown as MarketGateway,
+    gateway as unknown as RealtimeGateway,
   );
 
   beforeEach(() => vi.clearAllMocks());

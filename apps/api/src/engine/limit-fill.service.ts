@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FEE_RATES, type MarketSymbol } from '@paper-futures/shared';
+import { AccountEventsService } from '../account-events/account-events.service.js';
 import { AppException } from '../common/app.exception.js';
 import { fromDb, toDb } from '../common/db-decimal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -31,6 +32,7 @@ export class LimitFillService {
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
     private readonly trade: TradeService,
+    private readonly events: AccountEventsService,
   ) {}
 
   /** 한 종목 점검: 체결가 범위에 닿은 대기 주문을 먼저 들어온 순서대로 체결한다. 체결한 개수를 돌려준다 */
@@ -90,8 +92,9 @@ export class LimitFillService {
    *   시스템 취소(EXPIRED)하고 false
    */
   async fill(target: LimitFillTarget): Promise<boolean> {
+    let filled: boolean;
     try {
-      return await this.prisma.transaction(async (tx) => {
+      filled = await this.prisma.transaction(async (tx) => {
         // 1. 주문, 취소와 같은 지갑 잠금을 잡는다
         const wallet = await this.wallet.lockByUserId(tx, target.userId);
 
@@ -135,6 +138,9 @@ export class LimitFillService {
       await this.expire(target, error);
       return false;
     }
+    // 커밋한 뒤에 알린다
+    if (filled) await this.events.notify(target.userId, [target.id]);
+    return filled;
   }
 
   private async expire(target: LimitFillTarget, reason: AppException) {
@@ -147,6 +153,7 @@ export class LimitFillService {
       this.logger.warn(
         `지정가 주문 시스템 취소: 주문 ${target.id} (${reason.code}: ${reason.message})`,
       );
+      await this.events.notify(target.userId, [target.id]);
     }
   }
 }

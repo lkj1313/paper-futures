@@ -1,3 +1,4 @@
+import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import {
   Test,
@@ -5,13 +6,17 @@ import {
   type TestingModuleBuilder,
 } from '@nestjs/testing';
 import {
+  type ClientToServerEvents,
   type MarketSymbol,
   type MarketTrade,
   marketKey,
   type MarkPriceInfo,
   type OrderBookDepth,
   type PriceLevel,
+  REALTIME_PATH,
+  type ServerToClientEvents,
 } from '@paper-futures/shared';
+import { io, type Socket } from 'socket.io-client';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
@@ -196,5 +201,51 @@ export async function publishDepth(
   await redis.publish(
     redis.channel(marketKey(symbol, 'depth')),
     JSON.stringify(depth),
+  );
+}
+
+export type RealtimeClient = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+/** 실제 포트를 열고 주소를 돌려준다 (socket.io로 연결하려면 필요) */
+export async function listenForRealtime(app: INestApplication) {
+  await app.listen(0);
+  const { port } = app.getHttpServer().address() as AddressInfo;
+  return `http://127.0.0.1:${port}`;
+}
+
+/** 웹 브라우저처럼 socket.io로 연결한다. 거부되면 connect_error로 실패한다 */
+export function connectRealtime(
+  url: string,
+  token?: string,
+): Promise<RealtimeClient> {
+  const client: RealtimeClient = io(url, {
+    path: REALTIME_PATH,
+    transports: ['websocket'],
+    auth: token ? { token } : {},
+    reconnection: false,
+  });
+  return new Promise((resolve, reject) => {
+    client.once('connect', () => resolve(client));
+    client.once('connect_error', (error) => {
+      client.disconnect();
+      reject(error);
+    });
+  });
+}
+
+/** ms 동안 받은 이벤트를 모은다 */
+export function collectEvents<T>(
+  client: RealtimeClient,
+  event: keyof ServerToClientEvents,
+  ms = 300,
+): Promise<T[]> {
+  const received: T[] = [];
+  const listener = (payload: T) => received.push(payload);
+  client.on(event, listener as never);
+  return new Promise((resolve) =>
+    setTimeout(() => {
+      client.off(event, listener as never);
+      resolve(received);
+    }, ms),
   );
 }

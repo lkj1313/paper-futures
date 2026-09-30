@@ -6,6 +6,7 @@ import {
   type MarkPriceInfo,
   toDecimal,
 } from '@paper-futures/shared';
+import { AccountEventsService } from '../account-events/account-events.service.js';
 import { fromDb, toDb } from '../common/db-decimal.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
@@ -23,6 +24,7 @@ export class LiquidationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    private readonly events: AccountEventsService,
   ) {}
 
   /**
@@ -78,7 +80,8 @@ export class LiquidationService {
    * 청산했으면 true, 그 사이에 포지션이 닫혔거나 청산가가 바뀌어 조건이 안 맞으면 false
    */
   async liquidate(target: LiquidationTarget, markPrice: string) {
-    return this.prisma.transaction(async (tx) => {
+    // 청산했으면 바뀐 주문들(청산 주문 + 취소된 대기 주문), 아니면 null
+    const changedOrderIds = await this.prisma.transaction(async (tx) => {
       // 1. 주문과 같은 지갑 잠금을 잡아서, 사용자 주문과 동시에 처리되지 않게 한다
       const wallet = await this.wallet.lockByUserId(tx, target.userId);
 
@@ -95,20 +98,21 @@ export class LiquidationService {
           markPrice,
         )
       ) {
-        return false;
+        return null;
       }
 
       // 3. 포지션을 닫고, 청산 주문과 원장을 남긴다
       const loss = fromDb(position.isolatedMargin).neg();
       await tx.position.delete({ where: { id: position.id } });
       // 이 종목의 대기 주문도 시스템 취소한다 (바이낸스도 청산할 때 대기 주문을 취소한다)
-      await tx.order.updateMany({
+      const expired = await tx.order.updateManyAndReturn({
         where: {
           userId: position.userId,
           symbol: position.symbol,
           status: 'NEW',
         },
         data: { status: 'EXPIRED' },
+        select: { id: true },
       });
       const order = await tx.order.create({
         data: {
@@ -135,7 +139,11 @@ export class LiquidationService {
       this.logger.warn(
         `청산: ${position.symbol} ${position.side} ${position.qty.toString()}개, 마크가격 ${markPrice}, 손실 ${toDb(loss)} USDT (사용자 ${position.userId})`,
       );
-      return true;
+      return [order.id, ...expired.map((o) => o.id)];
     });
+
+    if (!changedOrderIds) return false;
+    await this.events.notify(target.userId, changedOrderIds);
+    return true;
   }
 }

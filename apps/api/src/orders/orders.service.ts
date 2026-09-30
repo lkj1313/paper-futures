@@ -12,6 +12,7 @@ import {
   toDecimal,
   tradingFee,
 } from '@paper-futures/shared';
+import { AccountEventsService } from '../account-events/account-events.service.js';
 import { AppException } from '../common/app.exception.js';
 import { cursorPageArgs, toCursorPage } from '../common/cursor-page.js';
 import { toDb } from '../common/db-decimal.js';
@@ -40,6 +41,7 @@ export class OrdersService {
     private readonly market: MarketService,
     private readonly wallet: WalletService,
     private readonly trade: TradeService,
+    private readonly events: AccountEventsService,
   ) {}
 
   /** 내 주문 내역을 최신순으로 limit개씩 */
@@ -86,7 +88,7 @@ export class OrdersService {
    * 호가로 바로 체결한 결과를 반영한다 (시장가, 바로 체결되는 지정가).
    * 이미 걸려 있던 호가를 가져가므로 테이커 수수료를 낸다.
    */
-  private fillNow(
+  private async fillNow(
     userId: string,
     dto: PlaceOrderDto,
     qty: Decimal,
@@ -100,7 +102,7 @@ export class OrdersService {
   ) {
     const { symbol, side, reduceOnly, leverage } = dto;
 
-    return this.prisma.transaction(async (tx) => {
+    const result = await this.prisma.transaction(async (tx) => {
       // 지갑을 잠가서 같은 사용자의 주문을 한 줄로 세운다
       const wallet = await this.wallet.lockByUserId(tx, userId);
 
@@ -135,6 +137,9 @@ export class OrdersService {
 
       return { order, position: applied.position };
     });
+    // 커밋한 뒤에 알린다 (트랜잭션 안에서 알리면 롤백된 일을 알릴 수 있다)
+    await this.events.notify(userId, [result.order.id]);
+    return result;
   }
 
   /**
@@ -173,7 +178,7 @@ export class OrdersService {
       });
     }
 
-    return this.prisma.transaction(async (tx) => {
+    const result = await this.prisma.transaction(async (tx) => {
       const wallet = await this.wallet.lockByUserId(tx, userId);
       const position = await tx.position.findUnique({
         where: { userId_symbol: { userId, symbol } },
@@ -220,11 +225,13 @@ export class OrdersService {
       });
       return { order, position };
     });
+    await this.events.notify(userId, [result.order.id]);
+    return result;
   }
 
   /** 대기 중인 주문을 취소한다. 묶여 있던 금액은 상태가 바뀌는 순간 풀린다 */
   async cancel(userId: string, orderId: string) {
-    return this.prisma.transaction(async (tx) => {
+    const canceled = await this.prisma.transaction(async (tx) => {
       // 체결 엔진과 동시에 같은 주문을 건드리지 않도록 같은 지갑 잠금을 잡는다
       await this.wallet.lockByUserId(tx, userId);
 
@@ -244,5 +251,7 @@ export class OrdersService {
         data: { status: 'CANCELED' },
       });
     });
+    await this.events.notify(userId, [canceled.id]);
+    return canceled;
   }
 }

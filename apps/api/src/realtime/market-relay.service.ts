@@ -16,7 +16,7 @@ import {
 } from '@paper-futures/shared';
 import type { Redis } from 'ioredis';
 import { RedisService } from '../redis/redis.service.js';
-import { MarketGateway } from './market.gateway.js';
+import { RealtimeGateway } from './realtime.gateway.js';
 
 /** 체결과 호가를 모았다가 보내는 주기 */
 const BATCH_INTERVAL_MS = 100;
@@ -41,7 +41,7 @@ export class MarketRelayService
 
   constructor(
     private readonly redis: RedisService,
-    private readonly gateway: MarketGateway,
+    private readonly gateway: RealtimeGateway,
   ) {}
 
   async onApplicationBootstrap() {
