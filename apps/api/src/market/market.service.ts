@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   isStale,
+  type MarketDataKind,
   type MarketSymbol,
   type MarketTrade,
   type MarkPriceInfo,
@@ -47,15 +48,24 @@ export class MarketService {
   }
 
   /** 모든 종목의 최신 마크가격을 MGET 한 번으로 읽는다. 받은 적 없으면 undefined */
-  async getMarkPrices(): Promise<
-    Record<MarketSymbol, MarkPriceInfo | undefined>
-  > {
+  getMarkPrices() {
+    return this.getLatest<MarkPriceInfo>('mark');
+  }
+
+  /** 모든 종목의 가장 최근 체결을 MGET 한 번으로 읽는다. 받은 적 없으면 undefined */
+  getLastTrades() {
+    return this.getLatest<MarketTrade>('trade');
+  }
+
+  private async getLatest<T>(
+    kind: MarketDataKind,
+  ): Promise<Record<MarketSymbol, T | undefined>> {
     const values = await this.redis.mget(
-      ...SYMBOLS.map((s) => marketKey(s, 'mark')),
+      ...SYMBOLS.map((s) => marketKey(s, kind)),
     );
     return Object.fromEntries(
-      SYMBOLS.map((symbol, i) => [symbol, parse<MarkPriceInfo>(values[i])]),
-    ) as Record<MarketSymbol, MarkPriceInfo | undefined>;
+      SYMBOLS.map((symbol, i) => [symbol, parse<T>(values[i])]),
+    ) as Record<MarketSymbol, T | undefined>;
   }
 
   /**

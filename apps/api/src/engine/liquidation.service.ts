@@ -74,7 +74,7 @@ export class LiquidationService {
   }
 
   /**
-   * 포지션 하나를 마크가격으로 강제 청산한다. 격리 증거금을 전부 잃는다.
+   * 포지션 하나를 마크가격으로 강제 청산한다. 격리 증거금을 전부 잃고, 이 종목의 대기 주문은 취소된다.
    * 청산했으면 true, 그 사이에 포지션이 닫혔거나 청산가가 바뀌어 조건이 안 맞으면 false
    */
   async liquidate(target: LiquidationTarget, markPrice: string) {
@@ -101,6 +101,15 @@ export class LiquidationService {
       // 3. 포지션을 닫고, 청산 주문과 원장을 남긴다
       const loss = fromDb(position.isolatedMargin).neg();
       await tx.position.delete({ where: { id: position.id } });
+      // 이 종목의 대기 주문도 시스템 취소한다 (바이낸스도 청산할 때 대기 주문을 취소한다)
+      await tx.order.updateMany({
+        where: {
+          userId: position.userId,
+          symbol: position.symbol,
+          status: 'NEW',
+        },
+        data: { status: 'EXPIRED' },
+      });
       const order = await tx.order.create({
         data: {
           userId: position.userId,

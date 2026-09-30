@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "prisma generate && nest build && concurrently -k -n api,market,risk -c blue,magenta,yellow \"node --enable-source-maps dist/main.js\" \"node --enable-source-maps dist/market-data.main.js\" \"node --enable-source-maps dist/risk.main.js\"",
+    "dev": "prisma generate && nest build && concurrently -k -n api,market,engine -c blue,magenta,yellow \"node --enable-source-maps dist/main.js\" \"node --enable-source-maps dist/market-data.main.js\" \"node --enable-source-maps dist/engine.main.js\"",
     "build": "prisma generate && nest build",
     "deploy": "nest deploy",
     "start": "nest start",
@@ -15,7 +15,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:market-data": "node dist/market-data.main",
-    "start:risk": "node dist/risk.main",
+    "start:engine": "node dist/engine.main",
     "lint": "oxlint --type-aware src/ test/",
     "test": "vitest run",
     "test:watch": "vitest",

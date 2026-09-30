@@ -36,6 +36,8 @@ export interface Fill {
   leverage: number;
   /** 바로 체결되면 테이커, 걸어 둔 지정가가 체결되면 메이커 */
   feeRate: DecimalLike;
+  /** 대기 주문이 체결되는 경우 그 주문 id. 그 주문에 묶여 있던 금액은 풀어서 계산한다 */
+  openOrderId?: string;
 }
 
 /** 체결을 반영한 결과. 주문 기록과 원장에 남길 값들 */
@@ -167,7 +169,12 @@ export class TradeService {
     // 주문 가능 금액(잔고 − 포지션 증거금 − 대기 주문에 묶인 금액) ≥ 필요 증거금 + 수수료
     const fee = toDecimal(toDb(tradingFee(fill.notional, fill.feeRate)));
     const margin = toDecimal(toDb(initialMargin(fill.notional, leverage)));
-    const available = await this.wallet.getAvailable(tx, wallet, fill.userId);
+    const available = await this.wallet.getAvailable(
+      tx,
+      wallet,
+      fill.userId,
+      fill.openOrderId,
+    );
     if (available.lt(margin.add(fee))) {
       throw new AppException('INSUFFICIENT_MARGIN', {
         message: `주문 가능 금액이 부족합니다. (필요 ${toDb(margin.add(fee))}, 가능 ${toDb(available)} USDT)`,

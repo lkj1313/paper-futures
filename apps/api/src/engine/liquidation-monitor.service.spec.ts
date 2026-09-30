@@ -2,7 +2,7 @@ import type { MarkPriceInfo } from '@paper-futures/shared';
 import type { MarketService } from '../market/market.service.js';
 import type { RedisService } from '../redis/redis.service.js';
 import type { LiquidationService } from './liquidation.service.js';
-import { RiskMonitorService } from './risk-monitor.service.js';
+import { LiquidationMonitorService } from './liquidation-monitor.service.js';
 
 const mark = (markPrice: string): MarkPriceInfo => ({
   markPrice,
@@ -13,7 +13,7 @@ const mark = (markPrice: string): MarkPriceInfo => ({
   receivedAt: 0,
 });
 
-describe('RiskMonitorService.schedule', () => {
+describe('LiquidationMonitorService.schedule', () => {
   it('종목마다 점검은 하나씩: 점검 중에 온 가격은 마지막 것만 이어서 점검한다', async () => {
     // 첫 BTC 점검은 release()를 부를 때까지 끝나지 않는다
     let release!: () => void;
@@ -26,7 +26,7 @@ describe('RiskMonitorService.schedule', () => {
         return 0;
       },
     };
-    const monitor = new RiskMonitorService(
+    const monitor = new LiquidationMonitorService(
       {} as RedisService,
       {} as MarketService,
       liquidation as unknown as LiquidationService,

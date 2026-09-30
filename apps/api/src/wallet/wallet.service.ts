@@ -101,19 +101,37 @@ export class WalletService {
     return _sum.isolatedMargin ?? new Prisma.Decimal(0);
   }
 
-  /** 대기 중인 지정가 주문에 묶인 금액 합계 */
-  async getOpenOrderMargin(userId: string, db: PrismaTx = this.prisma) {
+  /** 대기 중인 지정가 주문에 묶인 금액 합계. excludeOrderId는 빼고 센다 */
+  async getOpenOrderMargin(
+    userId: string,
+    db: PrismaTx = this.prisma,
+    excludeOrderId?: string,
+  ) {
     const { _sum } = await db.order.aggregate({
-      where: { userId, status: 'NEW' },
+      where: {
+        userId,
+        status: 'NEW',
+        ...(excludeOrderId && { id: { not: excludeOrderId } }),
+      },
       _sum: { reservedMargin: true },
     });
     return _sum.reservedMargin ?? new Prisma.Decimal(0);
   }
 
-  /** 주문 가능 금액 = 잔고 − 포지션 증거금 − 대기 주문에 묶인 금액. 잠근 지갑 기준으로 계산한다 */
-  async getAvailable(tx: PrismaTx, wallet: LockedWallet, userId: string) {
+  /**
+   * 주문 가능 금액 = 잔고 − 포지션 증거금 − 대기 주문에 묶인 금액. 잠근 지갑 기준으로 계산한다.
+   * 대기 주문이 체결될 때는 그 주문(excludeOrderId)에 묶여 있던 금액을 풀어서 계산한다.
+   */
+  async getAvailable(
+    tx: PrismaTx,
+    wallet: LockedWallet,
+    userId: string,
+    excludeOrderId?: string,
+  ) {
     const usedMargin = fromDb(await this.getUsedMargin(userId, tx));
-    const openOrderMargin = fromDb(await this.getOpenOrderMargin(userId, tx));
+    const openOrderMargin = fromDb(
+      await this.getOpenOrderMargin(userId, tx, excludeOrderId),
+    );
     return wallet.balance.sub(usedMargin).sub(openOrderMargin);
   }
 
