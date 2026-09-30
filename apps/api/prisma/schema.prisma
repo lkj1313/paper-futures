@@ -39,11 +39,14 @@ enum LedgerEntryType {
   SIGNUP_BONUS
   TRADING_FEE
   REALIZED_PNL
+  /// 강제 청산으로 잃은 증거금
+  LIQUIDATION
 }
 
 /// 원장: 잔고가 바뀔 때마다 한 줄씩 추가만 하고, 수정이나 삭제는 하지 않는다
 model LedgerEntry {
-  id           String          @id @default(uuid(7)) @db.Uuid
+  // api와 청산 프로세스가 함께 기록하므로, id(생성 순서)를 DB 한곳에서 만든다
+  id           String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
   walletId     String          @db.Uuid
   wallet       Wallet          @relation(fields: [walletId], references: [id], onDelete: Restrict)
   type         LedgerEntryType
@@ -51,7 +54,7 @@ model LedgerEntry {
   amount       Decimal         @db.Decimal(20, 8)
   /// 이 기록 직후의 잔고
   balanceAfter Decimal         @db.Decimal(20, 8)
-  /// 이 기록을 만든 주문 (수수료, 실현 손익). 가입 보너스처럼 주문과 무관하면 null
+  /// 이 기록을 만든 주문 (수수료, 실현 손익, 청산). 가입 보너스처럼 주문과 무관하면 null
   orderId      String?         @db.Uuid
   order        Order?          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   createdAt    DateTime        @default(now())
@@ -66,6 +69,8 @@ enum OrderSide {
 
 enum OrderType {
   MARKET
+  /// 청산가에 닿아 시스템이 강제로 닫은 주문 (사용자가 낼 수 없다)
+  LIQUIDATION
 }
 
 enum OrderStatus {
@@ -79,7 +84,8 @@ enum PositionSide {
 
 /// 주문 기록. 시장가 주문은 받는 즉시 전부 체결되거나 거부된다 (거부된 주문은 저장하지 않는다)
 model Order {
-  id           String        @id @default(uuid(7)) @db.Uuid
+  // api와 청산 프로세스가 함께 기록하므로, id(생성 순서)를 DB 한곳에서 만든다
+  id           String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
   userId       String        @db.Uuid
   user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   symbol       String
@@ -103,19 +109,23 @@ model Order {
 
 /// 지금 열려 있는 포지션. 종목당 하나이고, 완전히 닫히면 삭제된다 (기록은 주문과 원장에 남는다)
 model Position {
-  id             String       @id @default(uuid(7)) @db.Uuid
-  userId         String       @db.Uuid
-  user           User         @relation(fields: [userId], references: [id], onDelete: Restrict)
-  symbol         String
-  side           PositionSide
-  qty            Decimal      @db.Decimal(20, 8)
+  id               String       @id @default(uuid(7)) @db.Uuid
+  userId           String       @db.Uuid
+  user             User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  symbol           String
+  side             PositionSide
+  qty              Decimal      @db.Decimal(20, 8)
   /// 평균 진입가
-  entryPrice     Decimal      @db.Decimal(20, 8)
-  leverage       Int
+  entryPrice       Decimal      @db.Decimal(20, 8)
+  leverage         Int
   /// 이 포지션에 묶인 증거금 (격리 마진)
-  isolatedMargin Decimal      @db.Decimal(20, 8)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  isolatedMargin   Decimal      @db.Decimal(20, 8)
+  /// 격리 마진 청산가. 포지션을 저장할 때마다 다시 계산해 둔다 (청산 대상을 가격 범위로 찾기 위해)
+  liquidationPrice Decimal      @db.Decimal(20, 8)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   @@unique([userId, symbol])
+  // 마크가격이 바뀔 때 "이 종목 롱 중 청산가 ≥ 마크가격"을 바로 찾는다
+  @@index([symbol, side, liquidationPrice])
 }

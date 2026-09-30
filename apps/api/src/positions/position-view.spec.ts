@@ -13,7 +13,6 @@ const mark = (markPrice: string, receivedAt = now): MarkPriceInfo => ({
 
 // 롱 0.1개, 진입가 83,000.5, 증거금 830.005 (10배)
 const long = {
-  symbol: 'BTCUSDT',
   side: 'LONG' as const,
   qty: '0.1',
   entryPrice: '83000.5',
@@ -21,12 +20,11 @@ const long = {
 };
 
 describe('toPositionLiveValues', () => {
-  it('롱: 마크가격 85,000 기준 손익, ROE, 청산가', () => {
+  it('롱: 마크가격 85,000 기준 손익, ROE', () => {
     expect(toPositionLiveValues(long, mark('85000'), now)).toEqual({
       markPrice: '85000',
       unrealizedPnl: '199.95', // (85,000 − 83,000.5) × 0.1
       roe: '0.24090216', // 199.95 ÷ 830.005
-      liquidationPrice: '75000.45180723', // (8,300.05 − 830.005) ÷ (0.1 × 0.996)
       stale: false,
     });
   });
@@ -42,12 +40,11 @@ describe('toPositionLiveValues', () => {
     expect(v.roe).toBe('-0.24090216');
   });
 
-  it('마크가격이 없으면 손익과 ROE는 null, 청산가는 계산한다', () => {
+  it('마크가격이 없으면 손익과 ROE는 null', () => {
     expect(toPositionLiveValues(long, undefined, now)).toEqual({
       markPrice: null,
       unrealizedPnl: null,
       roe: null,
-      liquidationPrice: '75000.45180723',
       stale: true,
     });
   });

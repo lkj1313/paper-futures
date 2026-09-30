@@ -74,6 +74,8 @@ describe('POST /api/orders 시장가 주문 (e2e)', () => {
       entryPrice: '83000.5',
       leverage: 10,
       isolatedMargin: '830.005',
+      // (8,300.05 − 830.005) ÷ (0.1 × (1 − 0.004))
+      liquidationPrice: '75000.45180723',
     });
 
     // 증거금은 잔고에서 빠지지 않고 "사용 중"으로만 잡힌다
@@ -107,8 +109,23 @@ describe('POST /api/orders 시장가 주문 (e2e)', () => {
       entryPrice: '83000.33333333',
       leverage: 10,
       isolatedMargin: '1245.005',
+      // 진입가와 증거금이 바뀌었으니 청산가도 다시 계산된다
+      liquidationPrice: '75000.30120482',
     });
     expect(res.body.order.leverage).toBe(10);
+  });
+
+  it('숏을 열면 청산가는 진입가보다 위에 저장된다', async () => {
+    const res = await order({ side: 'SELL', qty: '0.1', leverage: 10 });
+
+    // 82,999 × 0.05 + 82,998 × 0.05 = 8,299.85 → 평균 82,998.5, 증거금 829.985
+    // 청산가 = (8,299.85 + 829.985) ÷ (0.1 × (1 + 0.004))
+    expect(res.status).toBe(201);
+    expect(res.body.position).toMatchObject({
+      side: 'SHORT',
+      entryPrice: '82998.5',
+      liquidationPrice: '90934.61155378',
+    });
   });
 
   it('주문 가능 금액이 모자라면 400 INSUFFICIENT_MARGIN, 아무것도 바뀌지 않는다', async () => {
@@ -154,6 +171,7 @@ describe('POST /api/orders 시장가 주문 (e2e)', () => {
   it.each([
     ['레버리지 200', { qty: '0.1', leverage: 200 }],
     ['지정가 주문', { qty: '0.1', type: 'LIMIT' }],
+    ['청산 주문 (시스템 전용)', { qty: '0.1', type: 'LIQUIDATION' }],
     ['없는 종목', { qty: '0.1', symbol: 'DOGEUSDT' }],
     ['숫자가 아닌 수량', { qty: 'abc' }],
   ])('%s → 400 VALIDATION_ERROR', async (_, body) => {

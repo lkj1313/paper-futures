@@ -1,9 +1,6 @@
 import {
   type DecimalLike,
-  isolatedLiquidationPrice,
   isStale,
-  MARKET_SPECS,
-  type MarketSymbol,
   type MarkPriceInfo,
   type PositionSide,
   roe,
@@ -13,7 +10,6 @@ import {
 type Amount = DecimalLike | { toString(): string };
 
 export interface PositionLike {
-  symbol: string;
   side: PositionSide;
   qty: Amount;
   entryPrice: Amount;
@@ -26,7 +22,6 @@ export interface PositionLiveValues {
   unrealizedPnl: string | null;
   /** 증거금 대비 수익률 (0.24 = 24%) */
   roe: string | null;
-  liquidationPrice: string;
   stale: boolean;
 }
 
@@ -43,26 +38,8 @@ export function toPositionLiveValues(
   const entryPrice = position.entryPrice.toString();
   const margin = position.isolatedMargin.toString();
 
-  // 청산가는 마크가격과 상관없이 포지션 정보만으로 정해진다
-  const liquidationPrice = fmt(
-    isolatedLiquidationPrice({
-      side: position.side,
-      entryPrice,
-      qty,
-      isolatedMargin: margin,
-      maintenanceMarginRate:
-        MARKET_SPECS[position.symbol as MarketSymbol].maintenanceMarginRate,
-    }),
-  );
-
   if (!mark) {
-    return {
-      markPrice: null,
-      unrealizedPnl: null,
-      roe: null,
-      liquidationPrice,
-      stale: true,
-    };
+    return { markPrice: null, unrealizedPnl: null, roe: null, stale: true };
   }
 
   const pnl = unrealizedPnl(position.side, entryPrice, mark.markPrice, qty);
@@ -70,7 +47,6 @@ export function toPositionLiveValues(
     markPrice: mark.markPrice,
     unrealizedPnl: fmt(pnl),
     roe: fmt(roe(pnl, margin)),
-    liquidationPrice,
     stale: isStale(mark.receivedAt, now),
   };
 }

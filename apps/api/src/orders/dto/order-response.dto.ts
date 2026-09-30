@@ -62,6 +62,8 @@ export class PositionDto {
   leverage: number;
   /** 이 포지션에 묶인 증거금 */
   isolatedMargin: string;
+  /** 격리 마진 청산가 (수수료 미반영). 롱이 절대 청산되지 않으면 0 */
+  liquidationPrice: string;
 
   static from(position: Position): PositionDto {
     return {
@@ -71,6 +73,7 @@ export class PositionDto {
       entryPrice: position.entryPrice.toString(),
       leverage: position.leverage,
       isolatedMargin: position.isolatedMargin.toString(),
+      liquidationPrice: position.liquidationPrice.toString(),
     };
   }
 }
