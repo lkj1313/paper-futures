@@ -1,8 +1,19 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiServiceUnavailableResponse,
@@ -11,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
+import { AppException } from '../common/app.exception.js';
 import { ErrorResponseDto } from '../common/error-response.dto.js';
 import {
   OrderDto,
@@ -44,14 +56,16 @@ export class OrdersController {
 
   @Post()
   @ApiOperation({
-    summary: '시장가 주문',
-    description:
-      '호가 기준으로 즉시 체결한다. 포지션과 같은 방향이면 열기/늘리기, 반대 방향이면 줄이기/닫기.',
+    summary: '주문 (시장가, 지정가)',
+    description: [
+      '시장가: 호가 기준으로 즉시 체결한다. 포지션과 같은 방향이면 열기/늘리기, 반대 방향이면 줄이기/닫기.',
+      '지정가: 대기(NEW)로 저장하고 증거금 + 수수료를 묶어 둔다 (reduceOnly는 묶지 않는다).',
+    ].join('\n\n'),
   })
   @ApiCreatedResponse({ type: PlaceOrderResponseDto })
   @ApiBadRequestResponse({
     description:
-      'VALIDATION_ERROR, INVALID_ORDER_QTY, INVALID_LEVERAGE, INSUFFICIENT_MARGIN, INSUFFICIENT_LIQUIDITY, POSITION_FLIP_NOT_SUPPORTED, REDUCE_ONLY_REJECTED',
+      'VALIDATION_ERROR, INVALID_ORDER_QTY, INVALID_ORDER_PRICE, INVALID_LEVERAGE, INSUFFICIENT_MARGIN, INSUFFICIENT_LIQUIDITY, POSITION_FLIP_NOT_SUPPORTED, REDUCE_ONLY_REJECTED',
     type: ErrorResponseDto,
   })
   @ApiServiceUnavailableResponse({
@@ -62,13 +76,44 @@ export class OrdersController {
     @CurrentUser() user: AuthUser,
     @Body() dto: PlaceOrderDto,
   ): Promise<PlaceOrderResponseDto> {
-    const { order, position } = await this.ordersService.placeMarketOrder(
-      user.id,
-      dto,
-    );
+    const { order, position } = await this.ordersService.place(user.id, dto);
     return {
       order: OrderDto.from(order),
       position: position && PositionDto.from(position),
     };
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: '대기 중인 지정가 주문 취소',
+    description: '상태가 CANCELED로 바뀌고 묶여 있던 금액이 풀린다.',
+  })
+  @ApiOkResponse({ type: OrderDto })
+  @ApiBadRequestResponse({
+    description: 'id 형식이 잘못됨 (VALIDATION_ERROR)',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: '없거나 내 주문이 아님 (NOT_FOUND)',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description: '이미 체결되거나 취소된 주문 (ORDER_NOT_OPEN)',
+    type: ErrorResponseDto,
+  })
+  async cancel(
+    @CurrentUser() user: AuthUser,
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        exceptionFactory: () =>
+          new AppException('VALIDATION_ERROR', {
+            message: '주문 id 형식이 올바르지 않습니다.',
+          }),
+      }),
+    )
+    id: string,
+  ): Promise<OrderDto> {
+    return OrderDto.from(await this.ordersService.cancel(user.id, id));
   }
 }

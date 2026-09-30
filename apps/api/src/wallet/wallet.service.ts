@@ -6,10 +6,16 @@ import {
   cursorPageArgs,
   toCursorPage,
 } from '../common/cursor-page.js';
-import { toDb } from '../common/db-decimal.js';
+import { fromDb, toDb } from '../common/db-decimal.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { LedgerEntryType } from '../generated/prisma/enums.js';
 import { PrismaService, type PrismaTx } from '../prisma/prisma.service.js';
+
+/** 잠근 지갑. 잔고는 계산용 Decimal로 바꿔 둔다 */
+export interface LockedWallet {
+  id: string;
+  balance: Decimal;
+}
 
 @Injectable()
 export class WalletService {
@@ -40,7 +46,7 @@ export class WalletService {
    * 지갑 행을 잠근다 (SELECT ... FOR UPDATE). 트랜잭션이 끝날 때까지 같은 사용자의
    * 다른 주문은 여기서 기다리므로, 잔고 확인과 변경 사이에 끼어들 수 없다.
    */
-  async lockByUserId(tx: PrismaTx, userId: string) {
+  async lockByUserId(tx: PrismaTx, userId: string): Promise<LockedWallet> {
     const [wallet] = await tx.$queryRaw<
       { id: string; balance: Prisma.Decimal }[]
     >`
@@ -51,7 +57,7 @@ export class WalletService {
         message: '지갑을 찾을 수 없습니다.',
       });
     }
-    return wallet;
+    return { id: wallet.id, balance: fromDb(wallet.balance) };
   }
 
   /**
@@ -61,7 +67,7 @@ export class WalletService {
    */
   async recordEntries(
     tx: PrismaTx,
-    wallet: { id: string; balance: Decimal },
+    wallet: LockedWallet,
     entries: { type: LedgerEntryType; amount: Decimal }[],
     orderId?: string,
   ) {
@@ -95,14 +101,32 @@ export class WalletService {
     return _sum.isolatedMargin ?? new Prisma.Decimal(0);
   }
 
-  /** 지갑 잔고, 사용 중 증거금, 주문 가능 금액 */
+  /** 대기 중인 지정가 주문에 묶인 금액 합계 */
+  async getOpenOrderMargin(userId: string, db: PrismaTx = this.prisma) {
+    const { _sum } = await db.order.aggregate({
+      where: { userId, status: 'NEW' },
+      _sum: { reservedMargin: true },
+    });
+    return _sum.reservedMargin ?? new Prisma.Decimal(0);
+  }
+
+  /** 주문 가능 금액 = 잔고 − 포지션 증거금 − 대기 주문에 묶인 금액. 잠근 지갑 기준으로 계산한다 */
+  async getAvailable(tx: PrismaTx, wallet: LockedWallet, userId: string) {
+    const usedMargin = fromDb(await this.getUsedMargin(userId, tx));
+    const openOrderMargin = fromDb(await this.getOpenOrderMargin(userId, tx));
+    return wallet.balance.sub(usedMargin).sub(openOrderMargin);
+  }
+
+  /** 지갑 잔고, 사용 중 증거금, 대기 주문에 묶인 금액, 주문 가능 금액 */
   async getSummary(userId: string) {
     const wallet = await this.getByUserId(userId);
     const usedMargin = await this.getUsedMargin(userId);
+    const openOrderMargin = await this.getOpenOrderMargin(userId);
     return {
       balance: wallet.balance,
       usedMargin,
-      availableBalance: wallet.balance.sub(usedMargin),
+      openOrderMargin,
+      availableBalance: wallet.balance.sub(usedMargin).sub(openOrderMargin),
     };
   }
 

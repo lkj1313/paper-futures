@@ -54,3 +54,36 @@ export function simulateMarketFill(
     fullyFilled: remaining.lte(0),
   };
 }
+
+/**
+ * 지정가 주문이 지금 호가로 바로 체결될 수 있는지.
+ * 매수는 지정가 이하의 매도 호가가, 매도는 지정가 이상의 매수 호가가 하나라도 있으면 된다.
+ */
+export function isMarketable(
+  side: OrderSide,
+  price: DecimalLike,
+  book: { bids: PriceLevel[]; asks: PriceLevel[] },
+): boolean {
+  const limit = toDecimal(price);
+  return side === 'BUY'
+    ? book.asks.some(([ask]) => limit.gte(ask))
+    : book.bids.some(([bid]) => limit.lte(bid));
+}
+
+/**
+ * 바로 체결되는 지정가 주문을 채워 본다. 지정가보다 불리한 호가는 쓰지 않는다.
+ * 매수는 지정가 이하의 매도 호가만, 매도는 지정가 이상의 매수 호가만 쓴다.
+ */
+export function simulateLimitFill(
+  side: OrderSide,
+  qty: DecimalLike,
+  price: DecimalLike,
+  book: { bids: PriceLevel[]; asks: PriceLevel[] },
+): FillResult {
+  const limit = toDecimal(price);
+  const within =
+    side === 'BUY'
+      ? { bids: [], asks: book.asks.filter(([ask]) => limit.gte(ask)) }
+      : { bids: book.bids.filter(([bid]) => limit.lte(bid)), asks: [] };
+  return simulateMarketFill(side, qty, within);
+}

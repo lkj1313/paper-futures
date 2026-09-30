@@ -92,7 +92,7 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
     expect({
       side: liq?.side,
       qty: liq?.qty.toString(),
-      avgFillPrice: liq?.avgFillPrice.toString(),
+      avgFillPrice: liq?.avgFillPrice?.toString(),
       fee: liq?.fee.toString(),
       realizedPnl: liq?.realizedPnl.toString(),
       reduceOnly: liq?.reduceOnly,
@@ -118,6 +118,7 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
       asset: 'USDT',
       balance: '9165.844975', // 9,995.849975 − 830.005
       usedMargin: '0',
+      openOrderMargin: '0',
       availableBalance: '9165.844975',
     });
     await ledgerSumEqualsBalance();

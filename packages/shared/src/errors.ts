@@ -33,6 +33,10 @@ export const ERRORS = {
     status: 400,
     message: '주문 수량이 올바르지 않습니다.',
   },
+  INVALID_ORDER_PRICE: {
+    status: 400,
+    message: '주문 가격이 올바르지 않습니다.',
+  },
   INVALID_LEVERAGE: { status: 400, message: '레버리지가 올바르지 않습니다.' },
   INSUFFICIENT_MARGIN: { status: 400, message: '주문 가능 금액이 부족합니다.' },
   INSUFFICIENT_LIQUIDITY: {
@@ -47,6 +51,10 @@ export const ERRORS = {
   REDUCE_ONLY_REJECTED: {
     status: 400,
     message: '줄일 수 있는 포지션이 없어 reduceOnly 주문을 거부했습니다.',
+  },
+  ORDER_NOT_OPEN: {
+    status: 409,
+    message: '대기 중인 주문만 취소할 수 있습니다.',
   },
 
   // 시세

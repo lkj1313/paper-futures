@@ -77,7 +77,7 @@ describe('risk 프로세스: 마크가격 감시 (e2e)', () => {
     const liq = await prisma.order.findFirstOrThrow({
       where: { type: 'LIQUIDATION' },
     });
-    expect(liq.avgFillPrice.toString()).toBe('81000');
+    expect(liq.avgFillPrice?.toString()).toBe('81000');
   });
 
   it('청산가에 닿지 않는 가격이 방송되면 그대로 둔다', async () => {
