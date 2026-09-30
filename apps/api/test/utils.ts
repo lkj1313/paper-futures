@@ -183,3 +183,18 @@ export async function publishTrade(
     JSON.stringify(tradeInfo(price)),
   );
 }
+
+/** market-data 프로세스처럼 호가를 방송한다 (저장은 하지 않는다) */
+export async function publishDepth(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  book: { bids: PriceLevel[]; asks: PriceLevel[] },
+) {
+  const redis = app.get(RedisService);
+  const now = Date.now();
+  const depth: OrderBookDepth = { ...book, time: now, receivedAt: now };
+  await redis.publish(
+    redis.channel(marketKey(symbol, 'depth')),
+    JSON.stringify(depth),
+  );
+}

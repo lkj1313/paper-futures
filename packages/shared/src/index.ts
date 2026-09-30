@@ -2,6 +2,7 @@ export * from './errors.js';
 export * from './market.js';
 export * from './market-specs.js';
 export * from './trading.js';
+export * from './realtime.js';
 export * from './math/decimal.js';
 export * from './math/rounding.js';
 export * from './math/margin.js';

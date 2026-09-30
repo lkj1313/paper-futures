@@ -62,6 +62,7 @@ describe('AllExceptionsFilter', () => {
     const json = vi.fn();
     const status = vi.fn(() => ({ json }));
     const host = {
+      getType: () => 'http',
       switchToHttp: () => ({ getResponse: () => ({ status }) }),
     } as unknown as ArgumentsHost;
 
@@ -69,6 +70,21 @@ describe('AllExceptionsFilter', () => {
 
     expect(status).toHaveBeenCalledWith(404);
     expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'NOT_FOUND' }),
+    );
+  });
+
+  it('WebSocket 연결에서 난 에러는 그 연결에 exception 이벤트로 보낸다', () => {
+    const emit = vi.fn();
+    const host = {
+      getType: () => 'ws',
+      switchToWs: () => ({ getClient: () => ({ emit }) }),
+    } as unknown as ArgumentsHost;
+
+    filter.catch(new NotFoundException('없음'), host);
+
+    expect(emit).toHaveBeenCalledWith(
+      'exception',
       expect.objectContaining({ code: 'NOT_FOUND' }),
     );
   });

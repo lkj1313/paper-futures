@@ -32,7 +32,9 @@
     "@nestjs/core": "^12.0.1",
     "@nestjs/jwt": "^12.0.2",
     "@nestjs/platform-express": "^12.0.1",
+    "@nestjs/platform-socket.io": "^12.1.1",
     "@nestjs/swagger": "^12.0.2",
+    "@nestjs/websockets": "^12.1.1",
     "@paper-futures/shared": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
@@ -43,6 +45,7 @@
     "ioredis": "^6.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "4.8.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -60,6 +63,7 @@
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prisma": "7.10.0",
+    "socket.io-client": "^4.8.3",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "typescript": "^6.0.2",

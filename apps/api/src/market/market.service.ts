@@ -47,6 +47,20 @@ export class MarketService {
     });
   }
 
+  /** 한 종목의 최신 체결, 마크가격, 호가를 MGET 한 번으로 읽는다. 받은 적 없으면 undefined */
+  async getSnapshot(symbol: MarketSymbol) {
+    const [trade = null, mark = null, depth = null] = await this.redis.mget(
+      marketKey(symbol, 'trade'),
+      marketKey(symbol, 'mark'),
+      marketKey(symbol, 'depth'),
+    );
+    return {
+      trade: parse<MarketTrade>(trade),
+      mark: parse<MarkPriceInfo>(mark),
+      depth: parse<OrderBookDepth>(depth),
+    };
+  }
+
   /** 모든 종목의 최신 마크가격을 MGET 한 번으로 읽는다. 받은 적 없으면 undefined */
   getMarkPrices() {
     return this.getLatest<MarkPriceInfo>('mark');
