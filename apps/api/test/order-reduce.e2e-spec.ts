@@ -96,6 +96,8 @@ describe('포지션 줄이기, 닫기 (e2e)', () => {
       entryPrice: '83000.5',
       leverage: 10,
       isolatedMargin: '498.003', // 830.005 × 0.6
+      // 수량과 증거금이 같은 비율로 줄어서 청산가는 그대로
+      liquidationPrice: '75000.45180723',
     });
     expect(await wallet()).toEqual({
       asset: 'USDT',

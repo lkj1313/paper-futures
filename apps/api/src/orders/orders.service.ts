@@ -5,6 +5,7 @@ import {
   type FillResult,
   initialMargin,
   isMultipleOf,
+  isolatedLiquidationPrice,
   MARKET_SPECS,
   type MarketSpec,
   type MarketSymbol,
@@ -24,6 +25,7 @@ import type { PlaceOrderDto } from './dto/place-order.dto.js';
 import {
   applyIncrease,
   applyReduce,
+  type PositionState,
   toPositionState,
 } from './position-changes.js';
 
@@ -31,6 +33,22 @@ import {
 const toDb = (value: Decimal) => value.toDecimalPlaces(8).toFixed();
 // Prisma Decimal → 계산용 Decimal
 const fromDb = (value: Prisma.Decimal) => toDecimal(value.toString());
+
+/**
+ * 포지션 테이블에 저장할 값. 청산가도 저장할 때마다 다시 계산한다
+ * (청산 프로세스가 이 값으로 청산 대상을 찾는다)
+ */
+const toPositionData = (position: PositionState, spec: MarketSpec) => ({
+  qty: toDb(position.qty),
+  entryPrice: toDb(position.entryPrice),
+  isolatedMargin: toDb(position.isolatedMargin),
+  liquidationPrice: toDb(
+    isolatedLiquidationPrice({
+      ...position,
+      maintenanceMarginRate: spec.maintenanceMarginRate,
+    }),
+  ),
+});
 
 /** 트랜잭션 안에서 주문 한 건을 처리할 때 필요한 값들 */
 interface OrderContext {
@@ -150,26 +168,17 @@ export class OrdersService {
       });
     }
 
+    const positionSide = side === 'BUY' ? 'LONG' : 'SHORT';
     const next = applyIncrease(
       position && toPositionState(position),
       { qty, notional: fill.notional },
       margin,
     );
-    const data = {
-      qty: toDb(next.qty),
-      entryPrice: toDb(next.entryPrice),
-      isolatedMargin: toDb(next.isolatedMargin),
-    };
+    const data = toPositionData({ side: positionSide, ...next }, spec);
     const saved = position
       ? await tx.position.update({ where: { id: position.id }, data })
       : await tx.position.create({
-          data: {
-            ...data,
-            userId,
-            symbol,
-            side: side === 'BUY' ? 'LONG' : 'SHORT',
-            leverage,
-          },
+          data: { ...data, userId, symbol, side: positionSide, leverage },
         });
 
     const order = await this.recordOrder(ctx, {
@@ -182,7 +191,7 @@ export class OrdersService {
 
   /** 포지션 줄이기 또는 닫기 */
   private async reduce(ctx: OrderContext, position: Position) {
-    const { tx, qty, reduceOnly, fill } = ctx;
+    const { tx, spec, qty, reduceOnly, fill } = ctx;
 
     if (qty.gt(fromDb(position.qty))) {
       throw new AppException(
@@ -193,20 +202,27 @@ export class OrdersService {
       );
     }
 
+    const state = toPositionState(position);
     const result = applyReduce(
-      toPositionState(position),
+      state,
       { qty, notional: fill.notional },
       FEE_RATES.taker,
     );
 
+    // 청산가는 수량과 증거금이 같은 비율로 줄어서 거의 그대로지만,
+    // 증거금 반올림 때문에 미세하게 달라질 수 있어 항상 다시 계산한다
     const saved = result.closed
       ? (await tx.position.delete({ where: { id: position.id } }), null)
       : await tx.position.update({
           where: { id: position.id },
-          data: {
-            qty: toDb(result.remainingQty),
-            isolatedMargin: toDb(result.remainingMargin),
-          },
+          data: toPositionData(
+            {
+              ...state,
+              qty: result.remainingQty,
+              isolatedMargin: result.remainingMargin,
+            },
+            spec,
+          ),
         });
 
     const order = await this.recordOrder(ctx, {
