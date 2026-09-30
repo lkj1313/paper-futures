@@ -13,6 +13,7 @@ import { MarketModule } from './market/market.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PositionsModule } from './positions/positions.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { RealtimeModule } from './realtime/realtime.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { WalletModule } from './wallet/wallet.module.js';
 
@@ -27,6 +28,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     MarketModule,
     OrdersModule,
     PositionsModule,
+    RealtimeModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

@@ -1,6 +1,10 @@
 export const SYMBOLS = ['BTCUSDT', 'ETHUSDT'] as const;
 export type MarketSymbol = (typeof SYMBOLS)[number];
 
+/** 지원하는 종목인지 */
+export const isMarketSymbol = (value: unknown): value is MarketSymbol =>
+  typeof value === 'string' && (SYMBOLS as readonly string[]).includes(value);
+
 /** market-data 프로세스가 Redis에 저장하고 방송하는 시세 종류 */
 export const MARKET_DATA_KINDS = ['trade', 'mark', 'depth'] as const;
 export type MarketDataKind = (typeof MARKET_DATA_KINDS)[number];

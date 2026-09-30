@@ -46,6 +46,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
+    // WebSocket 연결에서 난 에러는 HTTP 응답이 없으므로 그 연결에 에러 이벤트로 알린다
+    if (host.getType() === 'ws') {
+      host
+        .switchToWs()
+        .getClient<{ emit(event: string, body: unknown): void }>()
+        .emit('exception', body);
+      return;
+    }
     host
       .switchToHttp()
       .getResponse<Response>()
