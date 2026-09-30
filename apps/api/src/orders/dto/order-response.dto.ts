@@ -23,14 +23,32 @@ export class OrderDto {
   status: OrderStatus;
 
   qty: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '지정가. 시장가와 청산 주문은 null',
+  })
+  price: string | null;
+
   leverage: number;
   reduceOnly: boolean;
-  /** 평균 체결가 */
-  avgFillPrice: string;
+  /** 대기 중에 묶어 둔 금액 (증거금 + 수수료). 상태가 NEW일 때만 주문 가능 금액에서 빠진다 */
+  reservedMargin: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '평균 체결가. 아직 체결되지 않았으면 null',
+  })
+  avgFillPrice: string | null;
+
   fee: string;
   /** 포지션을 줄였을 때 확정된 손익 */
   realizedPnl: string;
   createdAt: Date;
+  /** 마지막으로 상태가 바뀐 시각 (체결, 취소) */
+  updatedAt: Date;
 
   static from(order: Order): OrderDto {
     return {
@@ -40,12 +58,15 @@ export class OrderDto {
       type: order.type,
       status: order.status,
       qty: order.qty.toString(),
+      price: order.price?.toString() ?? null,
       leverage: order.leverage,
       reduceOnly: order.reduceOnly,
-      avgFillPrice: order.avgFillPrice.toString(),
+      reservedMargin: order.reservedMargin.toString(),
+      avgFillPrice: order.avgFillPrice?.toString() ?? null,
       fee: order.fee.toString(),
       realizedPnl: order.realizedPnl.toString(),
       createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
     };
   }
 }
@@ -81,7 +102,7 @@ export class PositionDto {
 export class PlaceOrderResponseDto {
   order: OrderDto;
 
-  /** 주문 체결 후의 포지션. 포지션을 닫았으면 null */
+  /** 주문 후의 포지션. 포지션이 없거나 닫았으면 null (대기 주문은 포지션을 바꾸지 않는다) */
   @ApiProperty({ type: PositionDto, nullable: true })
   position: PositionDto | null;
 }

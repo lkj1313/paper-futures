@@ -103,6 +103,7 @@ describe('포지션 줄이기, 닫기 (e2e)', () => {
       asset: 'USDT',
       balance: '10074.129975', // 9,995.849975 + 79.98 − 1.7
       usedMargin: '498.003',
+      openOrderMargin: '0',
       availableBalance: '9576.126975',
     });
 

@@ -80,7 +80,7 @@ export class LiquidationService {
   async liquidate(target: LiquidationTarget, markPrice: string) {
     return this.prisma.transaction(async (tx) => {
       // 1. 주문과 같은 지갑 잠금을 잡아서, 사용자 주문과 동시에 처리되지 않게 한다
-      const locked = await this.wallet.lockByUserId(tx, target.userId);
+      const wallet = await this.wallet.lockByUserId(tx, target.userId);
 
       // 2. 잠근 뒤 포지션을 다시 읽고 조건을 다시 확인한다
       //    (대상을 조회한 뒤 사용자가 먼저 닫거나 늘렸을 수 있다)
@@ -118,7 +118,7 @@ export class LiquidationService {
       });
       await this.wallet.recordEntries(
         tx,
-        { id: locked.id, balance: fromDb(locked.balance) },
+        wallet,
         [{ type: 'LIQUIDATION', amount: loss }],
         order.id,
       );

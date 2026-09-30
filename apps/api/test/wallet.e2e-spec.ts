@@ -51,6 +51,7 @@ describe('지갑 (e2e)', () => {
       asset: 'USDT',
       balance: '10000',
       usedMargin: '0',
+      openOrderMargin: '0',
       availableBalance: '10000',
     });
   });

@@ -83,6 +83,7 @@ describe('POST /api/orders 시장가 주문 (e2e)', () => {
       asset: 'USDT',
       balance: '9995.849975',
       usedMargin: '830.005',
+      openOrderMargin: '0',
       availableBalance: '9165.844975',
     });
 
@@ -170,7 +171,7 @@ describe('POST /api/orders 시장가 주문 (e2e)', () => {
 
   it.each([
     ['레버리지 200', { qty: '0.1', leverage: 200 }],
-    ['지정가 주문', { qty: '0.1', type: 'LIMIT' }],
+    ['지정가인데 price 없음', { qty: '0.1', type: 'LIMIT' }],
     ['청산 주문 (시스템 전용)', { qty: '0.1', type: 'LIQUIDATION' }],
     ['없는 종목', { qty: '0.1', symbol: 'DOGEUSDT' }],
     ['숫자가 아닌 수량', { qty: 'abc' }],
