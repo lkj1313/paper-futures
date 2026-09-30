@@ -69,7 +69,8 @@ export class WalletService {
     tx: PrismaTx,
     wallet: LockedWallet,
     entries: { type: LedgerEntryType; amount: Decimal }[],
-    orderId?: string,
+    /** 이 기록을 만든 주문이나 펀딩 회차 */
+    source: { orderId?: string; fundingRoundId?: string } = {},
   ) {
     let balance = wallet.balance;
     for (const entry of entries) {
@@ -81,7 +82,7 @@ export class WalletService {
           type: entry.type,
           amount: toDb(entry.amount),
           balanceAfter: toDb(balance),
-          orderId,
+          ...source,
         },
       });
     }

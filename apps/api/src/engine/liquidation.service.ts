@@ -129,7 +129,7 @@ export class LiquidationService {
         tx,
         wallet,
         [{ type: 'LIQUIDATION', amount: loss }],
-        order.id,
+        { orderId: order.id },
       );
 
       this.logger.warn(

@@ -17,6 +17,7 @@ import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { RedisService } from '../src/redis/redis.service.js';
+import { FundingMonitorService } from '../src/engine/funding-monitor.service.js';
 import { LimitFillMonitorService } from '../src/engine/limit-fill-monitor.service.js';
 import { LiquidationMonitorService } from '../src/engine/liquidation-monitor.service.js';
 import { EngineModule } from '../src/engine/engine.module.js';
@@ -40,7 +41,7 @@ export async function createTestApp(
 
 /**
  * engine 프로세스와 같은 모듈 구성을 띄운다 (HTTP 앱과 같은 테스트 DB, Redis를 쓴다).
- * monitor가 false면 구독과 주기 점검(청산, 지정가 체결)을 끈다 (점검 함수를 직접 부르는 테스트에 끼어들지 않게)
+ * monitor가 false면 구독과 주기 점검(청산, 지정가 체결, 펀딩)을 끈다 (점검 함수를 직접 부르는 테스트에 끼어들지 않게)
  */
 export async function createEngineContext({
   monitor = false,
@@ -51,6 +52,8 @@ export async function createEngineContext({
       .overrideProvider(LiquidationMonitorService)
       .useValue({})
       .overrideProvider(LimitFillMonitorService)
+      .useValue({})
+      .overrideProvider(FundingMonitorService)
       .useValue({});
   }
   const moduleRef = await builder.compile();
@@ -105,6 +108,7 @@ export async function seedDepth(
 export const markInfo = (
   markPrice: string,
   receivedAt = Date.now(),
+  extra: Partial<MarkPriceInfo> = {},
 ): MarkPriceInfo => ({
   markPrice,
   indexPrice: markPrice,
@@ -112,6 +116,7 @@ export const markInfo = (
   nextFundingTime: receivedAt + 60_000,
   time: receivedAt,
   receivedAt,
+  ...extra,
 });
 
 /** market-data 프로세스 대신 테스트용 Redis에 마크가격을 넣는다 (방송은 하지 않는다) */
@@ -120,12 +125,13 @@ export async function seedMark(
   symbol: MarketSymbol,
   markPrice: string,
   receivedAt = Date.now(),
+  extra: Partial<MarkPriceInfo> = {},
 ) {
   await app
     .get(RedisService)
     .set(
       marketKey(symbol, 'mark'),
-      JSON.stringify(markInfo(markPrice, receivedAt)),
+      JSON.stringify(markInfo(markPrice, receivedAt, extra)),
     );
 }
 

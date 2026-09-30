@@ -1,9 +1,12 @@
 import {
   Decimal,
   type DecimalLike,
+  isolatedLiquidationPrice,
+  type MarketSpec,
   type PositionSide,
   toDecimal,
 } from '@paper-futures/shared';
+import { toDb } from '../common/db-decimal.js';
 
 // DB 컬럼이 Decimal(20, 8)이라 저장할 값은 소수 8자리로 맞춘다
 const DB_SCALE = 8;
@@ -114,4 +117,20 @@ export const toPositionState = (position: {
   qty: toDecimal(position.qty.toString()),
   entryPrice: toDecimal(position.entryPrice.toString()),
   isolatedMargin: toDecimal(position.isolatedMargin.toString()),
+});
+
+/**
+ * 포지션 테이블에 저장할 값. 청산가도 저장할 때마다 다시 계산한다
+ * (engine이 이 값으로 청산 대상을 찾는다)
+ */
+export const toPositionData = (position: PositionState, spec: MarketSpec) => ({
+  qty: toDb(position.qty),
+  entryPrice: toDb(position.entryPrice),
+  isolatedMargin: toDb(position.isolatedMargin),
+  liquidationPrice: toDb(
+    isolatedLiquidationPrice({
+      ...position,
+      maintenanceMarginRate: spec.maintenanceMarginRate,
+    }),
+  ),
 });

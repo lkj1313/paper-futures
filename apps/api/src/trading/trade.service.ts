@@ -3,9 +3,7 @@ import {
   type Decimal,
   type DecimalLike,
   initialMargin,
-  isolatedLiquidationPrice,
   MARKET_SPECS,
-  type MarketSpec,
   type MarketSymbol,
   type OrderSide,
   toDecimal,
@@ -19,7 +17,7 @@ import { type LockedWallet, WalletService } from '../wallet/wallet.service.js';
 import {
   applyIncrease,
   applyReduce,
-  type PositionState,
+  toPositionData,
   toPositionState,
 } from './position-changes.js';
 
@@ -49,22 +47,6 @@ export interface AppliedFill {
   /** 포지션을 줄였을 때 확정된 손익 (열기, 늘리기는 0) */
   realizedPnl: Decimal;
 }
-
-/**
- * 포지션 테이블에 저장할 값. 청산가도 저장할 때마다 다시 계산한다
- * (청산 프로세스가 이 값으로 청산 대상을 찾는다)
- */
-const toPositionData = (position: PositionState, spec: MarketSpec) => ({
-  qty: toDb(position.qty),
-  entryPrice: toDb(position.entryPrice),
-  isolatedMargin: toDb(position.isolatedMargin),
-  liquidationPrice: toDb(
-    isolatedLiquidationPrice({
-      ...position,
-      maintenanceMarginRate: spec.maintenanceMarginRate,
-    }),
-  ),
-});
 
 /** 체결을 포지션과 잔고에 반영한다. 시장가 주문과 지정가 체결이 함께 쓴다 */
 @Injectable()
@@ -149,7 +131,7 @@ export class TradeService {
         { type: 'REALIZED_PNL', amount: applied.realizedPnl },
         { type: 'TRADING_FEE', amount: applied.fee.neg() },
       ],
-      orderId,
+      { orderId },
     );
   }
 

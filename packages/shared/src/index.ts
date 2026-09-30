@@ -8,6 +8,7 @@ export * from './math/margin.js';
 export * from './math/pnl.js';
 export * from './math/liquidation.js';
 export * from './math/fill.js';
+export * from './math/funding.js';
 
 /** 모의거래소에서 쓰는 유일한 자산 */
 export const ASSET = 'USDT';
