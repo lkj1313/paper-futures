@@ -27,10 +27,10 @@ const errorDetail = (error: unknown) =>
  * - 방송은 놓치면 사라지므로, 시작할 때 한 번 그리고 5초마다 Redis에 저장된 최신 마크가격으로도 점검한다
  */
 @Injectable()
-export class RiskMonitorService
+export class LiquidationMonitorService
   implements OnApplicationBootstrap, OnModuleDestroy
 {
-  private readonly logger = new Logger(RiskMonitorService.name);
+  private readonly logger = new Logger(LiquidationMonitorService.name);
   /** 구독 중인 연결은 다른 명령을 못 쓰므로, 구독 전용 연결을 따로 둔다 */
   private subscriber?: Redis;
   private sweepTimer?: NodeJS.Timeout;

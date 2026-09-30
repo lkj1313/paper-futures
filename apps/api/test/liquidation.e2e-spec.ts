@@ -2,9 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { LiquidationService } from '../src/risk/liquidation.service.js';
+import { LiquidationService } from '../src/engine/liquidation.service.js';
 import {
-  createRiskContext,
+  createEngineContext,
   createTestApp,
   markInfo,
   resetData,
@@ -28,7 +28,7 @@ const btcBook = {
 
 describe('강제 청산 한 건 처리 (e2e)', () => {
   let app: INestApplication;
-  let risk: TestingModule;
+  let engine: TestingModule;
   let prisma: PrismaService;
   let liquidation: LiquidationService;
   let token: string;
@@ -63,9 +63,9 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
 
   beforeAll(async () => {
     app = await createTestApp();
-    risk = await createRiskContext();
+    engine = await createEngineContext();
     prisma = app.get(PrismaService);
-    liquidation = risk.get(LiquidationService);
+    liquidation = engine.get(LiquidationService);
   });
 
   beforeEach(async () => {
@@ -75,7 +75,7 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
   });
 
   afterAll(async () => {
-    await risk.close();
+    await engine.close();
     await app.close();
   });
 
@@ -122,6 +122,48 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
       availableBalance: '9165.844975',
     });
     await ledgerSumEqualsBalance();
+  });
+
+  it('청산되면 그 종목의 대기 주문은 시스템 취소(EXPIRED), 다른 종목은 그대로', async () => {
+    const target = await open('BUY');
+    // 익절 주문 (reduceOnly), 더 싸게 사려고 걸어 둔 주문
+    const tp = await order({
+      side: 'SELL',
+      type: 'LIMIT',
+      price: '90000',
+      reduceOnly: true,
+    });
+    const dip = await order({
+      side: 'BUY',
+      type: 'LIMIT',
+      price: '70000',
+      qty: '0.01',
+    });
+    await seedDepth(app, 'ETHUSDT', {
+      bids: [['2600', '10']],
+      asks: [['2600', '10']],
+    });
+    const eth = await order({
+      symbol: 'ETHUSDT',
+      side: 'BUY',
+      type: 'LIMIT',
+      price: '2000',
+      qty: '0.1',
+    });
+
+    expect(await liquidation.liquidate(target, '75000')).toBe(true);
+
+    const status = async (res: { body: { order: { id: string } } }) =>
+      (
+        await prisma.order.findUniqueOrThrow({
+          where: { id: res.body.order.id },
+        })
+      ).status;
+    expect(await status(tp)).toBe('EXPIRED');
+    expect(await status(dip)).toBe('EXPIRED');
+    expect(await status(eth)).toBe('NEW');
+    // 남은 묶인 금액은 ETH 주문 것뿐: 200 ÷ 10 + 200 × 0.02%
+    expect((await wallet()).openOrderMargin).toBe('20.04');
   });
 
   it('숏: 마크가격이 청산가와 같아도 청산된다 (반대 방향 BUY로 기록)', async () => {

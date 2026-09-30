@@ -6,6 +6,7 @@ import {
 } from '@nestjs/testing';
 import {
   type MarketSymbol,
+  type MarketTrade,
   marketKey,
   type MarkPriceInfo,
   type OrderBookDepth,
@@ -16,8 +17,9 @@ import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { RedisService } from '../src/redis/redis.service.js';
-import { RiskMonitorService } from '../src/risk/risk-monitor.service.js';
-import { RiskModule } from '../src/risk/risk.module.js';
+import { LimitFillMonitorService } from '../src/engine/limit-fill-monitor.service.js';
+import { LiquidationMonitorService } from '../src/engine/liquidation-monitor.service.js';
+import { EngineModule } from '../src/engine/engine.module.js';
 
 /**
  * main.ts와 같은 설정으로 테스트용 앱을 띄운다.
@@ -37,15 +39,19 @@ export async function createTestApp(
 }
 
 /**
- * risk 프로세스와 같은 모듈 구성을 띄운다 (HTTP 앱과 같은 테스트 DB, Redis를 쓴다).
- * monitor가 false면 구독과 5초 점검을 끈다 (점검 함수를 직접 부르는 테스트에 끼어들지 않게)
+ * engine 프로세스와 같은 모듈 구성을 띄운다 (HTTP 앱과 같은 테스트 DB, Redis를 쓴다).
+ * monitor가 false면 구독과 주기 점검(청산, 지정가 체결)을 끈다 (점검 함수를 직접 부르는 테스트에 끼어들지 않게)
  */
-export async function createRiskContext({
+export async function createEngineContext({
   monitor = false,
 } = {}): Promise<TestingModule> {
-  let builder = Test.createTestingModule({ imports: [RiskModule] });
+  let builder = Test.createTestingModule({ imports: [EngineModule] });
   if (!monitor) {
-    builder = builder.overrideProvider(RiskMonitorService).useValue({});
+    builder = builder
+      .overrideProvider(LiquidationMonitorService)
+      .useValue({})
+      .overrideProvider(LimitFillMonitorService)
+      .useValue({});
   }
   const moduleRef = await builder.compile();
   moduleRef.useLogger(false);
@@ -133,5 +139,41 @@ export async function publishMark(
   await redis.publish(
     redis.channel(marketKey(symbol, 'mark')),
     JSON.stringify(markInfo(markPrice)),
+  );
+}
+
+/** 테스트용 체결 정보 (받은 시각 = 지금) */
+const tradeInfo = (price: string, receivedAt = Date.now()): MarketTrade => ({
+  price,
+  qty: '0.01',
+  time: receivedAt,
+  receivedAt,
+});
+
+/** market-data 프로세스 대신 가장 최근 체결을 저장한다 (방송은 하지 않는다) */
+export async function seedTrade(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  price: string,
+  receivedAt = Date.now(),
+) {
+  await app
+    .get(RedisService)
+    .set(
+      marketKey(symbol, 'trade'),
+      JSON.stringify(tradeInfo(price, receivedAt)),
+    );
+}
+
+/** market-data 프로세스처럼 체결을 방송한다 (저장은 하지 않는다) */
+export async function publishTrade(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  price: string,
+) {
+  const redis = app.get(RedisService);
+  await redis.publish(
+    redis.channel(marketKey(symbol, 'trade')),
+    JSON.stringify(tradeInfo(price)),
   );
 }
