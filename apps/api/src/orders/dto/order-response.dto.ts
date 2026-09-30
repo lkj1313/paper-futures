@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { AccountOrder, AccountPosition } from '@paper-futures/shared';
 import type { Order, Position } from '../../generated/prisma/client.js';
 import {
   OrderSide,
@@ -9,7 +10,7 @@ import {
 
 // 금액, 수량, 가격은 모두 문자열로 준다
 
-export class OrderDto {
+export class OrderDto implements AccountOrder {
   id: string;
   symbol: string;
 
@@ -46,9 +47,15 @@ export class OrderDto {
   fee: string;
   /** 포지션을 줄였을 때 확정된 손익 */
   realizedPnl: string;
-  createdAt: Date;
-  /** 마지막으로 상태가 바뀐 시각 (체결, 취소) */
-  updatedAt: Date;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt: string;
+
+  @ApiProperty({
+    format: 'date-time',
+    description: '마지막으로 상태가 바뀐 시각 (체결, 취소)',
+  })
+  updatedAt: string;
 
   static from(order: Order): OrderDto {
     return {
@@ -65,13 +72,13 @@ export class OrderDto {
       avgFillPrice: order.avgFillPrice?.toString() ?? null,
       fee: order.fee.toString(),
       realizedPnl: order.realizedPnl.toString(),
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
     };
   }
 }
 
-export class PositionDto {
+export class PositionDto implements AccountPosition {
   symbol: string;
 
   @ApiProperty({ enum: PositionSide })

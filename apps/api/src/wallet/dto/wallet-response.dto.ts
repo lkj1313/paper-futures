@@ -1,7 +1,7 @@
-import { ASSET } from '@paper-futures/shared';
+import { type AccountWallet, ASSET } from '@paper-futures/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
 
-export class WalletResponseDto {
+export class WalletResponseDto implements AccountWallet {
   /** 자산 종류 */
   asset: string;
 

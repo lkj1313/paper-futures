@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AccountEventsModule } from '../account-events/account-events.module.js';
 import { AppConfigModule } from '../config/app-config.module.js';
 import { MarketModule } from '../market/market.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
@@ -21,6 +22,7 @@ import { LiquidationMonitorService } from './liquidation-monitor.service.js';
     MarketModule,
     WalletModule,
     TradingModule,
+    AccountEventsModule,
   ],
   providers: [
     LiquidationService,

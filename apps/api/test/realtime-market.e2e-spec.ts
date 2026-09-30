@@ -1,65 +1,35 @@
-import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
+import type { DepthEvent, MarkEvent, TradesEvent } from '@paper-futures/shared';
 import {
-  type ClientToServerEvents,
-  type DepthEvent,
-  type MarkEvent,
-  REALTIME_PATH,
-  type ServerToClientEvents,
-  type TradesEvent,
-} from '@paper-futures/shared';
-import { io, type Socket } from 'socket.io-client';
-import {
+  collectEvents,
+  connectRealtime,
   createTestApp,
+  listenForRealtime,
   publishDepth,
   publishMark,
   publishTrade,
+  type RealtimeClient,
   resetData,
   seedDepth,
   seedMark,
   seedTrade,
 } from './utils.js';
 
-type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
-
 describe('실시간 시세 (e2e)', () => {
   let app: INestApplication;
   let url: string;
-  const clients: Client[] = [];
+  const clients: RealtimeClient[] = [];
 
-  /** 웹 브라우저처럼 socket.io로 연결한다 */
-  const connect = async (): Promise<Client> => {
-    const client: Client = io(url, {
-      path: REALTIME_PATH,
-      transports: ['websocket'],
-    });
+  const connect = async () => {
+    const client = await connectRealtime(url);
     clients.push(client);
-    await new Promise((resolve) => client.once('connect', () => resolve(null)));
     return client;
   };
-
-  /** ms 동안 받은 이벤트를 모은다 */
-  const collect = <T>(
-    client: Client,
-    event: keyof ServerToClientEvents,
-    ms = 300,
-  ): Promise<T[]> => {
-    const received: T[] = [];
-    const listener = (payload: T) => received.push(payload);
-    client.on(event, listener as never);
-    return new Promise((resolve) =>
-      setTimeout(() => {
-        client.off(event, listener as never);
-        resolve(received);
-      }, ms),
-    );
-  };
+  const collect = collectEvents;
 
   beforeAll(async () => {
     app = await createTestApp();
-    await app.listen(0); // 실제 포트를 열어야 socket.io로 연결할 수 있다
-    const { port } = app.getHttpServer().address() as AddressInfo;
-    url = `http://127.0.0.1:${port}`;
+    url = await listenForRealtime(app);
   });
 
   beforeEach(async () => {
