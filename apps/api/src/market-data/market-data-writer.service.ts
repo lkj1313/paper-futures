@@ -3,7 +3,7 @@ import { marketKey } from '@paper-futures/shared';
 import { RedisService } from '../redis/redis.service.js';
 import { parseBinanceMessage } from './binance.parser.js';
 
-/** Binance 메시지를 검증해서 Redis에 최신값으로 저장하고, 같은 이름의 채널로 방송한다 */
+/** Binance 메시지를 검증해서 Redis에 최신값으로 저장하고, 같은 이름의 채널로 방송한다 (앞에 DB 번호) */
 @Injectable()
 export class MarketDataWriterService {
   private readonly logger = new Logger(MarketDataWriterService.name);
@@ -20,7 +20,11 @@ export class MarketDataWriterService {
     const key = marketKey(event.symbol, event.kind);
     const payload = JSON.stringify(event.data);
     // 저장과 방송을 한 번의 왕복으로 보낸다
-    await this.redis.pipeline().set(key, payload).publish(key, payload).exec();
+    await this.redis
+      .pipeline()
+      .set(key, payload)
+      .publish(this.redis.channel(key), payload)
+      .exec();
     return true;
   }
 }

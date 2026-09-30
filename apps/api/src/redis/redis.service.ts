@@ -29,4 +29,12 @@ export class RedisService
   async onModuleDestroy() {
     await this.quit();
   }
+
+  /**
+   * Pub/Sub 채널 이름. 저장 공간과 달리 방송은 DB 번호와 상관없이 Redis 서버 전체로 퍼지므로,
+   * DB 번호를 앞에 붙여 개발(0번)과 테스트(1번)의 방송이 섞이지 않게 한다. 예: 1:market:BTCUSDT:mark
+   */
+  channel(name: string) {
+    return `${this.options.db ?? 0}:${name}`;
+  }
 }

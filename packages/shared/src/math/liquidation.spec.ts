@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PositionSide } from '../trading.js';
 import { Decimal } from './decimal.js';
-import { isolatedLiquidationPrice } from './liquidation.js';
+import { isLiquidatable, isolatedLiquidationPrice } from './liquidation.js';
 import { maintenanceMargin, notional } from './margin.js';
 import { unrealizedPnl } from './pnl.js';
 
@@ -56,5 +56,19 @@ describe('isolatedLiquidationPrice', () => {
         isolatedMargin: '9000',
       }).toString(),
     ).toBe('0');
+  });
+});
+
+describe('isLiquidatable', () => {
+  it.each([
+    ['LONG', '75000', '75000.1', false],
+    ['LONG', '75000', '75000', true],
+    ['LONG', '75000', '74999.9', true],
+    ['LONG', '0', '1', false],
+    ['SHORT', '90936', '90935.9', false],
+    ['SHORT', '90936', '90936', true],
+    ['SHORT', '90936', '90936.1', true],
+  ] as const)('%s 청산가 %s, 마크가격 %s → %s', (side, liq, mark, expected) => {
+    expect(isLiquidatable(side, liq, mark)).toBe(expected);
   });
 });

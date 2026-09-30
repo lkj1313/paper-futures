@@ -16,7 +16,8 @@ import {
 } from '@paper-futures/shared';
 import { AppException } from '../common/app.exception.js';
 import { cursorPageArgs, toCursorPage } from '../common/cursor-page.js';
-import type { Position, Prisma } from '../generated/prisma/client.js';
+import { fromDb, toDb } from '../common/db-decimal.js';
+import type { Position } from '../generated/prisma/client.js';
 import { MarketService } from '../market/market.service.js';
 import { PrismaService, type PrismaTx } from '../prisma/prisma.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
@@ -28,11 +29,6 @@ import {
   type PositionState,
   toPositionState,
 } from './position-changes.js';
-
-// DB의 Decimal(20, 8)에 맞춰 소수 8자리로 반올림한 문자열
-const toDb = (value: Decimal) => value.toDecimalPlaces(8).toFixed();
-// Prisma Decimal → 계산용 Decimal
-const fromDb = (value: Prisma.Decimal) => toDecimal(value.toString());
 
 /**
  * 포지션 테이블에 저장할 값. 청산가도 저장할 때마다 다시 계산한다
@@ -233,10 +229,7 @@ export class OrdersService {
     return { order, position: saved };
   }
 
-  /**
-   * 주문을 기록하고 잔고를 바꾼 뒤 원장에 남긴다.
-   * 증거금은 잔고에서 빼지 않고 "사용 중"으로만 센다. 잔고는 실현 손익과 수수료로만 바뀐다.
-   */
+  /** 주문을 기록하고, 실현 손익 → 수수료 순서로 원장에 남기며 잔고를 바꾼다 */
   private async recordOrder(
     ctx: OrderContext,
     amounts: { leverage: number; fee: Decimal; realizedPnl: Decimal },
@@ -260,34 +253,15 @@ export class OrdersService {
       },
     });
 
-    // 실현 손익 → 수수료 순서로 원장에 한 줄씩
-    const entries: {
-      type: 'REALIZED_PNL' | 'TRADING_FEE';
-      amount: Decimal;
-    }[] = [];
-    if (!realizedPnl.isZero()) {
-      entries.push({ type: 'REALIZED_PNL', amount: realizedPnl });
-    }
-    if (!fee.isZero()) entries.push({ type: 'TRADING_FEE', amount: fee.neg() });
-
-    let balance = wallet.balance;
-    for (const entry of entries) {
-      balance = balance.add(entry.amount);
-      await tx.ledgerEntry.create({
-        data: {
-          walletId: wallet.id,
-          type: entry.type,
-          amount: toDb(entry.amount),
-          balanceAfter: toDb(balance),
-          orderId: order.id,
-        },
-      });
-    }
-    await tx.wallet.update({
-      where: { id: wallet.id },
-      data: { balance: toDb(balance) },
-    });
-
+    await this.wallet.recordEntries(
+      tx,
+      wallet,
+      [
+        { type: 'REALIZED_PNL', amount: realizedPnl },
+        { type: 'TRADING_FEE', amount: fee.neg() },
+      ],
+      order.id,
+    );
     return order;
   }
 }
