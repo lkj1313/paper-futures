@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { SIGNUP_BONUS_USDT } from '@paper-futures/shared';
+import { type Decimal, SIGNUP_BONUS_USDT } from '@paper-futures/shared';
 import { AppException } from '../common/app.exception.js';
 import {
   type CursorPageQueryDto,
   cursorPageArgs,
   toCursorPage,
 } from '../common/cursor-page.js';
+import { toDb } from '../common/db-decimal.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { LedgerEntryType } from '../generated/prisma/enums.js';
 import { PrismaService, type PrismaTx } from '../prisma/prisma.service.js';
@@ -51,6 +52,38 @@ export class WalletService {
       });
     }
     return wallet;
+  }
+
+  /**
+   * 원장에 한 줄씩 기록하고 잔고를 바꾼다. 금액이 0인 줄은 건너뛴다.
+   * 지갑은 같은 트랜잭션에서 lockByUserId로 먼저 잠가야 한다.
+   * 증거금은 잔고에서 빼지 않고 "사용 중"으로만 세므로, 잔고는 이 함수로만 바뀐다.
+   */
+  async recordEntries(
+    tx: PrismaTx,
+    wallet: { id: string; balance: Decimal },
+    entries: { type: LedgerEntryType; amount: Decimal }[],
+    orderId?: string,
+  ) {
+    let balance = wallet.balance;
+    for (const entry of entries) {
+      if (entry.amount.isZero()) continue;
+      balance = balance.add(entry.amount);
+      await tx.ledgerEntry.create({
+        data: {
+          walletId: wallet.id,
+          type: entry.type,
+          amount: toDb(entry.amount),
+          balanceAfter: toDb(balance),
+          orderId,
+        },
+      });
+    }
+    await tx.wallet.update({
+      where: { id: wallet.id },
+      data: { balance: toDb(balance) },
+    });
+    return balance;
   }
 
   /** 열린 포지션들에 묶인 증거금 합계 */

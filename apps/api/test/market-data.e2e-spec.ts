@@ -54,13 +54,15 @@ describe('MarketDataWriterService (e2e)', () => {
     });
   });
 
-  it('같은 이름의 채널로 방송한다', async () => {
+  it('DB 번호를 붙인 같은 이름의 채널로 방송한다', async () => {
     // 구독 전용 연결이 따로 필요하다 (구독 중인 연결은 다른 명령을 못 쓴다)
     const subscriber = new Redis(redis.options);
     const received = new Promise<string>((resolve) =>
       subscriber.on('message', (_channel, message) => resolve(message)),
     );
-    await subscriber.subscribe(marketKey('ETHUSDT', 'mark'));
+    const channel = redis.channel(marketKey('ETHUSDT', 'mark'));
+    expect(channel).toMatch(/^[1-9]\d*:market:ETHUSDT:mark$/); // 테스트용 DB 번호 (0번 아님)
+    await subscriber.subscribe(channel);
 
     await writer.handleMessage(markMessage);
 

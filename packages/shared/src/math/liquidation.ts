@@ -38,3 +38,18 @@ export function isolatedLiquidationPrice({
 
   return Decimal.max(price, 0);
 }
+
+/**
+ * 마크가격이 청산가에 닿았는지. 롱은 마크가격 ≤ 청산가, 숏은 마크가격 ≥ 청산가
+ * (청산가가 0인 롱은 마크가격이 0보다 크므로 청산되지 않는다)
+ */
+export function isLiquidatable(
+  side: PositionSide,
+  liquidationPrice: DecimalLike,
+  markPrice: DecimalLike,
+): boolean {
+  const mark = toDecimal(markPrice);
+  return side === 'LONG'
+    ? mark.lte(liquidationPrice)
+    : mark.gte(liquidationPrice);
+}
