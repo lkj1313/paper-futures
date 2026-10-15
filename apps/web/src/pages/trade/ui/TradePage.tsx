@@ -1,6 +1,7 @@
 import { SYMBOLS } from '@paper-futures/shared';
 import { Link, useParams } from 'react-router';
 import { useIsLoggedIn, useMe } from '@/entities/session';
+import { LogoutButton } from '@/features/auth';
 import { cn } from '@/shared/lib/utils';
 
 export function TradePage() {
@@ -30,9 +31,12 @@ export function TradePage() {
         <span className="text-sm text-muted-foreground">
           마크가격 · 24h 변동 · 펀딩비율 · 다음 펀딩까지
         </span>
-        <div className="ml-auto text-sm">
+        <div className="ml-auto flex items-center gap-2 text-sm">
           {isLoggedIn ? (
-            <span className="text-muted-foreground">{me?.email}</span>
+            <>
+              <span className="text-muted-foreground">{me?.email}</span>
+              <LogoutButton />
+            </>
           ) : (
             <Link
               to="/login"

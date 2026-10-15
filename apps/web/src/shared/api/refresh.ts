@@ -27,8 +27,13 @@ async function requestNewToken(): Promise<string> {
     useTokenStore.getState().setAccessToken(data.accessToken);
     return data.accessToken;
   } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 401) {
-      useTokenStore.getState().clearAccessToken();
+    const { accessToken, clearAccessToken } = useTokenStore.getState();
+    if (
+      isAxiosError(error) &&
+      error.response?.status === 401 &&
+      accessToken !== null
+    ) {
+      clearAccessToken();
       notifySessionExpired();
     }
     throw error;

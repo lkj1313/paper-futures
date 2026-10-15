@@ -2,7 +2,7 @@ import { HttpResponse, delay, http as rest } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '@/test/server';
 import { http } from './http';
-import { REFRESH_LOCK_NAME } from './refresh';
+import { REFRESH_LOCK_NAME, refreshAccessToken } from './refresh';
 import { setSessionExpiredHandler } from './session-expired';
 import { useTokenStore } from './token-store';
 
@@ -196,5 +196,14 @@ describe('토큰 만료 시 자동 갱신', () => {
     } finally {
       Reflect.deleteProperty(navigator, 'locks');
     }
+  });
+
+  it('로그인한 적 없는 상태에서 refresh가 거절되면 세션 종료를 알리지 않는다', async () => {
+    refreshEndpoint(invalidRefreshToken);
+    const onExpired = vi.fn();
+    setSessionExpiredHandler(onExpired);
+
+    await expect(refreshAccessToken()).rejects.toBeDefined();
+    expect(onExpired).not.toHaveBeenCalled();
   });
 });

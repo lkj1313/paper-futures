@@ -11,3 +11,6 @@ export const login = (body: LoginRequest) =>
 
 export const signup = (body: SignupRequest) =>
   http.post<UserProfile>('/auth/signup', body).then((res) => res.data);
+
+export const logout = () =>
+  http.post<void>('/auth/logout').then(() => undefined);

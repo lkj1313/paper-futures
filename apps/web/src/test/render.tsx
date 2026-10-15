@@ -9,9 +9,12 @@ export function createTestQueryClient() {
   });
 }
 
-export function renderWithProviders(ui: ReactNode) {
+export function renderWithProviders(
+  ui: ReactNode,
+  queryClient: QueryClient = createTestQueryClient(),
+) {
   return render(
-    <QueryClientProvider client={createTestQueryClient()}>
+    <QueryClientProvider client={queryClient}>
       {ui}
       <Toaster theme="dark" />
     </QueryClientProvider>,
