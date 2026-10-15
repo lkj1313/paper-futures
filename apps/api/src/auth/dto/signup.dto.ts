@@ -1,7 +1,8 @@
+import type { SignupRequest } from '@paper-futures/shared';
 import { IsEmail, IsString, Length } from 'class-validator';
 import { NormalizeEmail } from '../../common/transformers.js';
 
-export class SignupDto {
+export class SignupDto implements SignupRequest {
   /** 앞뒤 공백을 지우고 소문자로 통일한다 */
   @NormalizeEmail()
   @IsEmail({}, { message: '이메일 형식이 아닙니다.' })

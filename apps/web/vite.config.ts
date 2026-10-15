@@ -8,7 +8,10 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:3000', ws: true },
+      '/api': {
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:3000',
+        ws: true,
+      },
     },
   },
 });

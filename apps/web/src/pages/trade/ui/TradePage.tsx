@@ -1,9 +1,13 @@
 import { SYMBOLS } from '@paper-futures/shared';
 import { Link, useParams } from 'react-router';
+import { useIsLoggedIn, useMe } from '@/entities/session';
+import { LogoutButton } from '@/features/auth';
 import { cn } from '@/shared/lib/utils';
 
 export function TradePage() {
   const { symbol } = useParams();
+  const isLoggedIn = useIsLoggedIn();
+  const { data: me } = useMe();
 
   return (
     <div className="grid h-screen grid-cols-[minmax(0,1fr)_280px_320px] grid-rows-[auto_minmax(0,1fr)_260px] gap-1 p-1">
@@ -27,12 +31,21 @@ export function TradePage() {
         <span className="text-sm text-muted-foreground">
           마크가격 · 24h 변동 · 펀딩비율 · 다음 펀딩까지
         </span>
-        <Link
-          to="/login"
-          className="ml-auto text-sm text-muted-foreground hover:text-foreground"
-        >
-          로그인
-        </Link>
+        <div className="ml-auto flex items-center gap-2 text-sm">
+          {isLoggedIn ? (
+            <>
+              <span className="text-muted-foreground">{me?.email}</span>
+              <LogoutButton />
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              로그인
+            </Link>
+          )}
+        </div>
       </header>
       <Placeholder label="차트" />
       <div className="grid grid-rows-2 gap-1">
