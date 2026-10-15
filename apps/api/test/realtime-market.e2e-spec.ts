@@ -1,5 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
-import type { DepthEvent, MarkEvent, TradesEvent } from '@paper-futures/shared';
+import type {
+  DepthEvent,
+  MarkEvent,
+  TickerEvent,
+  TradesEvent,
+} from '@paper-futures/shared';
 import {
   collectEvents,
   connectRealtime,
@@ -7,12 +12,14 @@ import {
   listenForRealtime,
   publishDepth,
   publishMark,
+  publishTicker,
   publishTrade,
   type RealtimeClient,
   resetData,
   seedDepth,
   seedMark,
-  seedTrade,
+  seedRecentTrades,
+  seedTicker,
 } from './utils.js';
 
 describe('실시간 시세 (e2e)', () => {
@@ -90,20 +97,38 @@ describe('실시간 시세 (e2e)', () => {
     expect(received.at(-1)?.asks).toEqual([['83002', '1']]);
   });
 
-  it('방에 들어가자마자 저장된 최신 시세를 받는다', async () => {
+  it('24시간 통계는 오는 대로 보낸다', async () => {
+    const client = await connect();
+    await client.emitWithAck('subscribe', 'BTCUSDT');
+
+    const tickers = collect<TickerEvent>(client, 'ticker');
+    await publishTicker(app, 'ETHUSDT', '2600');
+    await publishTicker(app, 'BTCUSDT', '83000');
+
+    expect((await tickers).map((t) => [t.symbol, t.lastPrice])).toEqual([
+      ['BTCUSDT', '83000'],
+    ]);
+  });
+
+  it('방에 들어가자마자 저장된 최신 시세와 최근 체결 목록을 받는다', async () => {
     await seedMark(app, 'BTCUSDT', '83000');
-    await seedTrade(app, 'BTCUSDT', '83001');
+    await seedRecentTrades(app, 'BTCUSDT', ['83001', '83002', '83003']);
     await seedDepth(app, 'BTCUSDT', { bids: [], asks: [['83002', '1']] });
+    await seedTicker(app, 'BTCUSDT', '83003');
     const client = await connect();
 
     const marks = collect<MarkEvent>(client, 'mark');
     const trades = collect<TradesEvent>(client, 'trades');
     const depths = collect<DepthEvent>(client, 'depth');
+    const tickers = collect<TickerEvent>(client, 'ticker');
     await client.emitWithAck('subscribe', 'BTCUSDT');
 
     expect((await marks).map((m) => m.markPrice)).toEqual(['83000']);
-    expect((await trades).map((t) => t.trades[0]?.price)).toEqual(['83001']);
+    expect((await trades).map((t) => t.trades.map((x) => x.price))).toEqual([
+      ['83001', '83002', '83003'],
+    ]);
     expect((await depths).map((d) => d.asks)).toEqual([[['83002', '1']]]);
+    expect((await tickers).map((t) => t.lastPrice)).toEqual(['83003']);
   });
 
   it('지원하지 않는 종목은 거부한다', async () => {

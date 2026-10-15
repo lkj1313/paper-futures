@@ -4,6 +4,7 @@ import {
   type MarkPriceInfo,
   type OrderBookDepth,
   SYMBOLS,
+  type Ticker24h,
 } from '@paper-futures/shared';
 import { z } from 'zod';
 
@@ -40,16 +41,36 @@ const depthUpdate = z.object({
   a: z.array(level), // 매도 호가
 });
 
+const ticker = z.object({
+  e: z.literal('24hrTicker'),
+  E: z.number(),
+  s: symbol,
+  p: signedDecimal,
+  P: signedDecimal,
+  c: decimal,
+  o: decimal,
+  h: decimal,
+  l: decimal,
+  v: decimal,
+  q: decimal,
+});
+
 // 여러 스트림을 한 연결로 받으면 { stream, data } 형태로 감싸서 온다
 const combinedMessage = z.object({
   stream: z.string(),
-  data: z.discriminatedUnion('e', [aggTrade, markPriceUpdate, depthUpdate]),
+  data: z.discriminatedUnion('e', [
+    aggTrade,
+    markPriceUpdate,
+    depthUpdate,
+    ticker,
+  ]),
 });
 
 export type MarketEvent =
   | { symbol: MarketSymbol; kind: 'trade'; data: MarketTrade }
   | { symbol: MarketSymbol; kind: 'mark'; data: MarkPriceInfo }
-  | { symbol: MarketSymbol; kind: 'depth'; data: OrderBookDepth };
+  | { symbol: MarketSymbol; kind: 'depth'; data: OrderBookDepth }
+  | { symbol: MarketSymbol; kind: 'ticker'; data: Ticker24h };
 
 /**
  * Binance 메시지를 검증하고 알아보기 쉬운 이름으로 바꾼다.
@@ -96,6 +117,23 @@ export function parseBinanceMessage(
         kind: 'depth',
         data: { bids: data.b, asks: data.a, time: data.E, receivedAt },
       };
+    case '24hrTicker':
+      return {
+        symbol: data.s,
+        kind: 'ticker',
+        data: {
+          lastPrice: data.c,
+          priceChange: data.p,
+          priceChangePercent: data.P,
+          openPrice: data.o,
+          highPrice: data.h,
+          lowPrice: data.l,
+          volume: data.v,
+          quoteVolume: data.q,
+          time: data.E,
+          receivedAt,
+        },
+      };
   }
 }
 
@@ -107,7 +145,7 @@ export const STREAMS_BY_ROUTE: Record<
   // 고빈도 데이터: 상위 20단계 호가 (100ms마다)
   public: (s) => [`${s}@depth20@100ms`],
   // 일반 데이터: 체결, 마크가격 (1초마다)
-  market: (s) => [`${s}@aggTrade`, `${s}@markPrice@1s`],
+  market: (s) => [`${s}@aggTrade`, `${s}@markPrice@1s`, `${s}@ticker`],
 };
 
 export function buildStreamUrl(

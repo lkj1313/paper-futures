@@ -7,7 +7,9 @@ import {
   type MarkPriceInfo,
   marketKey,
   type OrderBookDepth,
+  recentTradesKey,
   SYMBOLS,
+  type Ticker24h,
 } from '@paper-futures/shared';
 import { AppException } from '../common/app.exception.js';
 import { RedisService } from '../redis/redis.service.js';
@@ -23,16 +25,18 @@ export class MarketService {
   constructor(private readonly redis: RedisService) {}
 
   async getSummaries(now = Date.now()): Promise<MarketSummaryDto[]> {
-    // 종목별 체결, 마크가격 키를 MGET 한 번으로 가져온다
+    // 종목별 체결, 마크가격, 24시간 통계 키를 MGET 한 번으로 가져온다
     const keys = SYMBOLS.flatMap((s) => [
       marketKey(s, 'trade'),
       marketKey(s, 'mark'),
+      marketKey(s, 'ticker'),
     ]);
     const values = await this.redis.mget(...keys);
 
     return SYMBOLS.map((symbol, i) => {
-      const trade = parse<MarketTrade>(values[i * 2]);
-      const mark = parse<MarkPriceInfo>(values[i * 2 + 1]);
+      const trade = parse<MarketTrade>(values[i * 3]);
+      const mark = parse<MarkPriceInfo>(values[i * 3 + 1]);
+      const ticker = parse<Ticker24h>(values[i * 3 + 2]);
       return {
         symbol,
         lastPrice: trade?.price ?? null,
@@ -40,6 +44,12 @@ export class MarketService {
         indexPrice: mark?.indexPrice ?? null,
         fundingRate: mark?.fundingRate ?? null,
         nextFundingTime: mark?.nextFundingTime ?? null,
+        priceChange: ticker?.priceChange ?? null,
+        priceChangePercent: ticker?.priceChangePercent ?? null,
+        highPrice: ticker?.highPrice ?? null,
+        lowPrice: ticker?.lowPrice ?? null,
+        volume: ticker?.volume ?? null,
+        quoteVolume: ticker?.quoteVolume ?? null,
         updatedAt: mark?.time ?? null,
         // 체결은 거래가 뜸하면 한동안 안 올 수 있어서, 1초마다 오는 마크가격으로 판단한다
         stale: isStale(mark?.receivedAt, now),
@@ -47,17 +57,24 @@ export class MarketService {
     });
   }
 
-  /** 한 종목의 최신 체결, 마크가격, 호가를 MGET 한 번으로 읽는다. 받은 적 없으면 undefined */
+  /** 한 종목의 최근 체결 목록(오래된 것부터), 마크가격, 호가, 24시간 통계를 읽는다. 받은 적 없으면 undefined */
   async getSnapshot(symbol: MarketSymbol) {
-    const [trade = null, mark = null, depth = null] = await this.redis.mget(
-      marketKey(symbol, 'trade'),
-      marketKey(symbol, 'mark'),
-      marketKey(symbol, 'depth'),
-    );
+    const [[mark = null, depth = null, ticker = null], recentTrades] =
+      await Promise.all([
+        this.redis.mget(
+          marketKey(symbol, 'mark'),
+          marketKey(symbol, 'depth'),
+          marketKey(symbol, 'ticker'),
+        ),
+        this.redis.lrange(recentTradesKey(symbol), 0, -1),
+      ]);
     return {
-      trade: parse<MarketTrade>(trade),
+      trades: recentTrades
+        .reverse()
+        .map((raw) => JSON.parse(raw) as MarketTrade),
       mark: parse<MarkPriceInfo>(mark),
       depth: parse<OrderBookDepth>(depth),
+      ticker: parse<Ticker24h>(ticker),
     };
   }
 

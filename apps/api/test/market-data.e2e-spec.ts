@@ -1,6 +1,10 @@
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import { marketKey } from '@paper-futures/shared';
+import {
+  marketKey,
+  RECENT_TRADES_LIMIT,
+  recentTradesKey,
+} from '@paper-futures/shared';
 import { Redis } from 'ioredis';
 import { AppConfigModule } from '../src/config/app-config.module.js';
 import { MarketDataWriterService } from '../src/market-data/market-data-writer.service.js';
@@ -68,6 +72,53 @@ describe('MarketDataWriterService (e2e)', () => {
 
     expect(JSON.parse(await received)).toMatchObject({ markPrice: '3120.50' });
     await subscriber.quit();
+  });
+
+  it('체결은 최근 목록에도 넣고, 50개를 넘으면 오래된 것부터 버린다', async () => {
+    const tradeMessage = (price: string) =>
+      JSON.stringify({
+        stream: 'ethusdt@aggTrade',
+        data: { e: 'aggTrade', s: 'ETHUSDT', p: price, q: '0.010', T: 1 },
+      });
+    const prices = Array.from({ length: RECENT_TRADES_LIMIT + 2 }, (_, i) =>
+      String(3000 + i),
+    );
+    for (const price of prices) await writer.handleMessage(tradeMessage(price));
+
+    const saved = (await redis.lrange(recentTradesKey('ETHUSDT'), 0, -1)).map(
+      (raw) => (JSON.parse(raw) as { price: string }).price,
+    );
+    expect(saved).toHaveLength(RECENT_TRADES_LIMIT);
+    expect(saved[0]).toBe(prices.at(-1));
+    expect(saved.at(-1)).toBe(prices[2]);
+    expect(
+      JSON.parse((await redis.get(marketKey('ETHUSDT', 'trade')))!),
+    ).toMatchObject({ price: prices.at(-1) });
+  });
+
+  it('24시간 통계를 market:{종목}:ticker에 저장한다', async () => {
+    await writer.handleMessage(
+      JSON.stringify({
+        stream: 'ethusdt@ticker',
+        data: {
+          e: '24hrTicker',
+          E: 1792051154614,
+          s: 'ETHUSDT',
+          p: '-12.50',
+          P: '-0.400',
+          c: '3108.00',
+          o: '3120.50',
+          h: '3150.00',
+          l: '3050.00',
+          v: '1000.000',
+          q: '3110000.00',
+        },
+      }),
+    );
+
+    expect(
+      JSON.parse((await redis.get(marketKey('ETHUSDT', 'ticker')))!),
+    ).toMatchObject({ lastPrice: '3108.00', priceChangePercent: '-0.400' });
   });
 
   it('처리할 수 없는 메시지는 저장하지 않는다', async () => {

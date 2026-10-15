@@ -14,7 +14,9 @@ import {
   type OrderBookDepth,
   type PriceLevel,
   REALTIME_PATH,
+  recentTradesKey,
   type ServerToClientEvents,
+  type Ticker24h,
 } from '@paper-futures/shared';
 import { io, type Socket } from 'socket.io-client';
 import request from 'supertest';
@@ -186,6 +188,58 @@ export async function publishTrade(
   await redis.publish(
     redis.channel(marketKey(symbol, 'trade')),
     JSON.stringify(tradeInfo(price)),
+  );
+}
+
+export async function seedRecentTrades(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  pricesOldestFirst: string[],
+) {
+  const redis = app.get(RedisService);
+  for (const price of pricesOldestFirst) {
+    await redis.lpush(
+      recentTradesKey(symbol),
+      JSON.stringify(tradeInfo(price)),
+    );
+  }
+}
+
+export const tickerInfo = (
+  lastPrice: string,
+  receivedAt = Date.now(),
+): Ticker24h => ({
+  lastPrice,
+  priceChange: '-100.00',
+  priceChangePercent: '-0.120',
+  openPrice: '83100.00',
+  highPrice: '84000.00',
+  lowPrice: '82000.00',
+  volume: '1000.000',
+  quoteVolume: '83000000.00',
+  time: receivedAt,
+  receivedAt,
+});
+
+export async function seedTicker(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  lastPrice: string,
+) {
+  await app
+    .get(RedisService)
+    .set(marketKey(symbol, 'ticker'), JSON.stringify(tickerInfo(lastPrice)));
+}
+
+export async function publishTicker(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  lastPrice: string,
+) {
+  const redis = app.get(RedisService);
+  await redis.publish(
+    redis.channel(marketKey(symbol, 'ticker')),
+    JSON.stringify(tickerInfo(lastPrice)),
   );
 }
 

@@ -9,6 +9,7 @@ import type {
   MarketTrade,
   MarkPriceInfo,
   OrderBookDepth,
+  Ticker24h,
 } from './market.js';
 
 /** socket.io 연결 경로. api 서버와 같은 포트를 쓴다 */
@@ -43,6 +44,10 @@ export interface DepthEvent extends OrderBookDepth {
   symbol: MarketSymbol;
 }
 
+export interface TickerEvent extends Ticker24h {
+  symbol: MarketSymbol;
+}
+
 /** 구독 요청 결과 */
 export type SubscribeAck = { ok: true } | { ok: false; message: string };
 
@@ -51,6 +56,7 @@ export interface ServerToClientEvents {
   trades: (event: TradesEvent) => void;
   mark: (event: MarkEvent) => void;
   depth: (event: DepthEvent) => void;
+  ticker: (event: TickerEvent) => void;
 
   // 아래는 로그인한 연결만 받는다
   /** 내 주문이 바뀜 (넣음, 체결, 취소, 시스템 취소, 청산) */

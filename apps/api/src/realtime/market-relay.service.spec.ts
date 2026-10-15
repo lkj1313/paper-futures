@@ -12,6 +12,7 @@ describe('MarketRelayService', () => {
     sendTrades: vi.fn(),
     sendMark: vi.fn(),
     sendDepth: vi.fn(),
+    sendTicker: vi.fn(),
   };
   const relay = new MarketRelayService(
     {} as RedisService,
@@ -29,6 +30,18 @@ describe('MarketRelayService', () => {
 
     expect(gateway.sendMark).toHaveBeenCalledWith(
       expect.objectContaining({ symbol: 'BTCUSDT', markPrice: '83000' }),
+    );
+  });
+
+  it('24시간 통계는 오는 대로 바로 보낸다', () => {
+    relay.receive(
+      'ETHUSDT',
+      'ticker',
+      JSON.stringify({ lastPrice: '2600', priceChangePercent: '1.2' }),
+    );
+
+    expect(gateway.sendTicker).toHaveBeenCalledWith(
+      expect.objectContaining({ symbol: 'ETHUSDT', priceChangePercent: '1.2' }),
     );
   });
 

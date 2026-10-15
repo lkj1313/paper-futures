@@ -4,10 +4,11 @@ import {
   type MarkPriceInfo,
   marketKey,
   type OrderBookDepth,
+  type Ticker24h,
 } from '@paper-futures/shared';
 import request from 'supertest';
 import { RedisService } from '../src/redis/redis.service.js';
-import { createTestApp, resetData } from './utils.js';
+import { createTestApp, resetData, tickerInfo } from './utils.js';
 
 describe('시세 조회 (e2e)', () => {
   let app: INestApplication;
@@ -20,6 +21,7 @@ describe('시세 조회 (e2e)', () => {
     trade: MarketTrade,
     mark: MarkPriceInfo,
     depth: OrderBookDepth,
+    ticker?: Ticker24h,
   ) => {
     await redis.mset(
       marketKey('BTCUSDT', 'trade'),
@@ -29,6 +31,9 @@ describe('시세 조회 (e2e)', () => {
       marketKey('BTCUSDT', 'depth'),
       JSON.stringify(depth),
     );
+    if (ticker) {
+      await redis.set(marketKey('BTCUSDT', 'ticker'), JSON.stringify(ticker));
+    }
   };
 
   const fresh = () => {
@@ -72,7 +77,7 @@ describe('시세 조회 (e2e)', () => {
 
   it('GET /api/markets: 받은 시세는 문자열로, 받지 못한 종목은 null과 stale', async () => {
     const { trade, mark, depth } = fresh();
-    await seed(trade, mark, depth);
+    await seed(trade, mark, depth, tickerInfo('83105.30'));
 
     const res = await get('/api/markets'); // 토큰 없이 호출 (공개 API)
 
@@ -85,6 +90,12 @@ describe('시세 조회 (e2e)', () => {
         indexPrice: '83145.80',
         fundingRate: '-0.00002539',
         nextFundingTime: 1790582400000,
+        priceChange: '-100.00',
+        priceChangePercent: '-0.120',
+        highPrice: '84000.00',
+        lowPrice: '82000.00',
+        volume: '1000.000',
+        quoteVolume: '83000000.00',
         updatedAt: mark.time,
         stale: false,
       },
@@ -95,6 +106,12 @@ describe('시세 조회 (e2e)', () => {
         indexPrice: null,
         fundingRate: null,
         nextFundingTime: null,
+        priceChange: null,
+        priceChangePercent: null,
+        highPrice: null,
+        lowPrice: null,
+        volume: null,
+        quoteVolume: null,
         updatedAt: null,
         stale: true,
       },
