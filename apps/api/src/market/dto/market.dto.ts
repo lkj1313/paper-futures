@@ -34,6 +34,40 @@ export class MarketSummaryDto {
   nextFundingTime: number | null;
 
   @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '24시간 등락액 (음수 가능)',
+  })
+  priceChange: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '24시간 등락률, % 단위 (-2.515 = -2.515%)',
+  })
+  priceChangePercent: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: '24시간 최고가' })
+  highPrice: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: '24시간 최저가' })
+  lowPrice: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '24시간 거래량 (기초 자산 수량)',
+  })
+  volume: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: '24시간 거래대금 (USDT)',
+  })
+  quoteVolume: string | null;
+
+  @ApiProperty({
     type: Number,
     nullable: true,
     description: '마크가격 기준 시각 (ms)',

@@ -13,6 +13,7 @@ import {
   marketKey,
   type OrderBookDepth,
   SYMBOLS,
+  type Ticker24h,
 } from '@paper-futures/shared';
 import type { Redis } from 'ioredis';
 import { RedisService } from '../redis/redis.service.js';
@@ -99,6 +100,12 @@ export class MarketRelayService
       }
       case 'depth':
         this.depths.set(symbol, JSON.parse(message) as OrderBookDepth);
+        return;
+      case 'ticker':
+        this.gateway.sendTicker({
+          ...(JSON.parse(message) as Ticker24h),
+          symbol,
+        });
         return;
     }
   }

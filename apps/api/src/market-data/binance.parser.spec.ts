@@ -52,6 +52,29 @@ const samples = {
       a: [['83105.40', '1.224']],
     },
   },
+  ticker: {
+    stream: 'btcusdt@ticker',
+    data: {
+      e: '24hrTicker',
+      E: 1792051154614,
+      s: 'BTCUSDT',
+      p: '-2101.50',
+      P: '-2.515',
+      w: '81975.12',
+      c: '81459.30',
+      Q: '0.004',
+      o: '83560.80',
+      h: '84117.60',
+      l: '80188.00',
+      v: '214103.225',
+      q: '17551551274.00',
+      O: 1791964740000,
+      C: 1792051154612,
+      F: 8125000000,
+      L: 8128000000,
+      n: 3000001,
+    },
+  },
 };
 
 const parse = (message: unknown) =>
@@ -102,6 +125,25 @@ describe('parseBinanceMessage', () => {
     });
   });
 
+  it('24시간 통계(24hrTicker)를 Ticker24h로 바꾼다 (등락은 음수 가능)', () => {
+    expect(parse(samples.ticker)).toEqual({
+      symbol: 'BTCUSDT',
+      kind: 'ticker',
+      data: {
+        lastPrice: '81459.30',
+        priceChange: '-2101.50',
+        priceChangePercent: '-2.515',
+        openPrice: '83560.80',
+        highPrice: '84117.60',
+        lowPrice: '80188.00',
+        volume: '214103.225',
+        quoteVolume: '17551551274.00',
+        time: 1792051154614,
+        receivedAt: 1000,
+      },
+    });
+  });
+
   it('다루지 않는 종목이면 null', () => {
     const doge = structuredClone(samples.aggTrade);
     doge.data.s = 'DOGEUSDT';
@@ -124,7 +166,8 @@ describe('buildStreamUrl', () => {
   it('경로별로 두 종목의 스트림을 묶는다', () => {
     expect(buildStreamUrl('wss://fstream.binance.com', 'market')).toBe(
       'wss://fstream.binance.com/market/stream?streams=' +
-        'btcusdt@aggTrade/btcusdt@markPrice@1s/ethusdt@aggTrade/ethusdt@markPrice@1s',
+        'btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@ticker/' +
+        'ethusdt@aggTrade/ethusdt@markPrice@1s/ethusdt@ticker',
     );
     expect(buildStreamUrl('wss://fstream.binance.com', 'public')).toBe(
       'wss://fstream.binance.com/public/stream?streams=' +

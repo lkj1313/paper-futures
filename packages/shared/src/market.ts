@@ -6,12 +6,17 @@ export const isMarketSymbol = (value: unknown): value is MarketSymbol =>
   typeof value === 'string' && (SYMBOLS as readonly string[]).includes(value);
 
 /** market-data 프로세스가 Redis에 저장하고 방송하는 시세 종류 */
-export const MARKET_DATA_KINDS = ['trade', 'mark', 'depth'] as const;
+export const MARKET_DATA_KINDS = ['trade', 'mark', 'depth', 'ticker'] as const;
 export type MarketDataKind = (typeof MARKET_DATA_KINDS)[number];
 
 /** Redis 키이자 Pub/Sub 채널 이름. 예: market:BTCUSDT:mark */
 export const marketKey = (symbol: MarketSymbol, kind: MarketDataKind) =>
   `market:${symbol}:${kind}`;
+
+export const RECENT_TRADES_LIMIT = 50;
+
+export const recentTradesKey = (symbol: MarketSymbol) =>
+  `market:${symbol}:trades`;
 
 // 가격과 수량은 모두 Binance가 보내준 그대로 문자열이다.
 // time은 Binance 기준 시각, receivedAt은 우리가 받은 시각 (둘 다 ms).
@@ -41,6 +46,19 @@ export type PriceLevel = [price: string, qty: string];
 export interface OrderBookDepth {
   bids: PriceLevel[];
   asks: PriceLevel[];
+  time: number;
+  receivedAt: number;
+}
+
+export interface Ticker24h {
+  lastPrice: string;
+  priceChange: string;
+  priceChangePercent: string;
+  openPrice: string;
+  highPrice: string;
+  lowPrice: string;
+  volume: string;
+  quoteVolume: string;
   time: number;
   receivedAt: number;
 }

@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { marketKey } from '@paper-futures/shared';
+import {
+  marketKey,
+  RECENT_TRADES_LIMIT,
+  recentTradesKey,
+} from '@paper-futures/shared';
 import { RedisService } from '../redis/redis.service.js';
 import { parseBinanceMessage } from './binance.parser.js';
 
@@ -20,11 +24,17 @@ export class MarketDataWriterService {
     const key = marketKey(event.symbol, event.kind);
     const payload = JSON.stringify(event.data);
     // 저장과 방송을 한 번의 왕복으로 보낸다
-    await this.redis
+    const pipeline = this.redis
       .pipeline()
       .set(key, payload)
-      .publish(this.redis.channel(key), payload)
-      .exec();
+      .publish(this.redis.channel(key), payload);
+    if (event.kind === 'trade') {
+      const listKey = recentTradesKey(event.symbol);
+      pipeline
+        .lpush(listKey, payload)
+        .ltrim(listKey, 0, RECENT_TRADES_LIMIT - 1);
+    }
+    await pipeline.exec();
     return true;
   }
 }

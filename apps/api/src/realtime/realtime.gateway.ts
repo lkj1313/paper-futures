@@ -21,6 +21,7 @@ import {
   type RealtimeAuthError,
   type ServerToClientEvents,
   type SubscribeAck,
+  type TickerEvent,
   type TradesEvent,
 } from '@paper-futures/shared';
 import type { DefaultEventsMap, Server, Socket } from 'socket.io';
@@ -123,10 +124,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     if (!isMarketSymbol(symbol)) return UNKNOWN_SYMBOL;
     await socket.join(marketRoom(symbol));
 
-    const { trade, mark, depth } = await this.market.getSnapshot(symbol);
-    if (trade) socket.emit('trades', { symbol, trades: [trade] });
+    const { trades, mark, depth, ticker } =
+      await this.market.getSnapshot(symbol);
+    if (trades.length > 0) socket.emit('trades', { symbol, trades });
     if (mark) socket.emit('mark', { ...mark, symbol });
     if (depth) socket.emit('depth', { ...depth, symbol });
+    if (ticker) socket.emit('ticker', { ...ticker, symbol });
     return { ok: true };
   }
 
@@ -150,6 +153,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
 
   sendDepth(event: DepthEvent) {
     this.server.to(marketRoom(event.symbol)).emit('depth', event);
+  }
+
+  sendTicker(event: TickerEvent) {
+    this.server.to(marketRoom(event.symbol)).emit('ticker', event);
   }
 
   /** 이 사용자가 지금 연결돼 있는지 (없으면 보낼 필요가 없다) */
