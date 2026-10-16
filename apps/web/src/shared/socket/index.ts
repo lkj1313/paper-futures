@@ -8,3 +8,4 @@ export const socket: RealtimeSocket = io({
 });
 
 export const { subscribeMarket, unsubscribeMarket } = createRealtime(socket);
+export type { RealtimeSocket } from './realtime';
