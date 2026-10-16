@@ -156,9 +156,12 @@ export async function publishMark(
 }
 
 /** 테스트용 체결 정보 (받은 시각 = 지금) */
+let nextTradeId = 1;
 const tradeInfo = (price: string, receivedAt = Date.now()): MarketTrade => ({
+  id: nextTradeId++,
   price,
   qty: '0.01',
+  side: 'BUY',
   time: receivedAt,
   receivedAt,
 });

@@ -81,17 +81,25 @@ const parse = (message: unknown) =>
   parseBinanceMessage(JSON.stringify(message), 1000);
 
 describe('parseBinanceMessage', () => {
-  it('체결(aggTrade)을 MarketTrade로 바꾼다', () => {
+  it('체결(aggTrade)을 MarketTrade로 바꾼다 (매수가 먼저 걸어 둔 체결이면 SELL)', () => {
     expect(parse(samples.aggTrade)).toEqual({
       symbol: 'BTCUSDT',
       kind: 'trade',
       data: {
+        id: 3467435296,
         price: '83105.30',
         qty: '0.100',
+        side: 'SELL',
         time: 1790578730196,
         receivedAt: 1000,
       },
     });
+  });
+
+  it('매도가 먼저 걸어 둔 체결이면 BUY', () => {
+    const takerBuy = structuredClone(samples.aggTrade);
+    takerBuy.data.m = false;
+    expect(parse(takerBuy)).toMatchObject({ data: { side: 'BUY' } });
   });
 
   it('마크가격(markPriceUpdate)을 MarkPriceInfo로 바꾼다', () => {
