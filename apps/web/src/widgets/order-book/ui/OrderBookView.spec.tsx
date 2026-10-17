@@ -4,8 +4,9 @@ import type {
   OrderBookDepth,
   PriceLevel,
 } from '@paper-futures/shared';
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FakeResizeObserver } from '@/test/resize-observer';
 import { OrderBookView, type OrderBookViewProps } from './OrderBookView';
 
 const NOW = Date.UTC(2026, 9, 17, 0, 0, 0);
@@ -48,6 +49,19 @@ const BOOK = depth(
     ['81565.9', '0.098'],
   ],
 );
+
+const ladder = (start: number, step: number): PriceLevel[] =>
+  Array.from({ length: 20 }, (_, i) => [
+    (start + step * i).toFixed(1),
+    '1.000',
+  ]);
+
+const FULL_BOOK = depth(ladder(81565.4, -0.1), ladder(81565.5, 0.1));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  FakeResizeObserver.last = undefined;
+});
 
 function renderView(props: Partial<OrderBookViewProps> = {}) {
   render(
@@ -106,17 +120,34 @@ describe('OrderBookView', () => {
     );
   });
 
-  it('각 쪽 10단계까지만 그린다', () => {
-    const ladder = (start: number, step: number): PriceLevel[] =>
-      Array.from({ length: 20 }, (_, i) => [
-        (start + step * i).toFixed(1),
-        '1.000',
-      ]);
-
-    renderView({ depth: depth(ladder(81565.4, -0.1), ladder(81565.5, 0.1)) });
+  it('칸 높이를 아직 모르면 각 쪽 10단계를 그린다', () => {
+    renderView({ depth: FULL_BOOK });
 
     expect(rowsOf('매도 호가')).toHaveLength(10);
     expect(rowsOf('매수 호가')).toHaveLength(10);
+  });
+
+  it('칸 높이에 온전히 들어가는 줄 수만큼 그린다', () => {
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    renderView({ depth: FULL_BOOK });
+
+    act(() => FakeResizeObserver.last?.resize(110));
+    expect(rowsOf('매도 호가')).toHaveLength(5);
+    expect(rowsOf('매수 호가')).toHaveLength(5);
+
+    act(() => FakeResizeObserver.last?.resize(300));
+    expect(rowsOf('매도 호가')).toHaveLength(15);
+    expect(rowsOf('매수 호가')).toHaveLength(15);
+  });
+
+  it('칸이 아주 높아도 받은 20단계까지만 그린다', () => {
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    renderView({ depth: FULL_BOOK });
+
+    act(() => FakeResizeObserver.last?.resize(2000));
+
+    expect(rowsOf('매도 호가')).toHaveLength(20);
+    expect(rowsOf('매수 호가')).toHaveLength(20);
   });
 
   it('호가를 받기 전에는 비워 두고 현재가와 마크가격은 --', () => {

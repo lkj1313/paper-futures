@@ -8,10 +8,13 @@ import {
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { priceDirection } from '@/entities/market';
 import { formatPrice, formatQty } from '@/shared/lib/format';
+import { useElementHeight } from '@/shared/lib/use-element-height';
+import { baseAssetOf } from '@/shared/lib/symbol';
 import { cn } from '@/shared/lib/utils';
 import { type BookRow, bidShare, buildBookRows } from '../lib/book-rows';
 
-const LEVELS = 10;
+const DEFAULT_LEVELS = 10;
+const ROW_HEIGHT = 20;
 const EMPTY = '--';
 const NO_LEVELS = { bids: [], asks: [] };
 
@@ -31,12 +34,15 @@ export function OrderBookView({
   now,
 }: OrderBookViewProps) {
   const stale = isStale(depth?.receivedAt, now);
-  const { bids, asks } = buildBookRows(depth ?? NO_LEVELS, LEVELS);
+  const [sideRef, sideHeight] = useElementHeight<HTMLOListElement>();
+  const levels =
+    sideHeight === null ? DEFAULT_LEVELS : Math.floor(sideHeight / ROW_HEIGHT);
+  const { bids, asks } = buildBookRows(depth ?? NO_LEVELS, levels);
   const share = bidShare(depth ?? NO_LEVELS);
   const bidPercent = share === null ? null : Math.round(share * 100);
   const lastPrice = trades[0]?.price;
   const direction = priceDirection(trades);
-  const baseAsset = symbol.replace(/USDT$/, '');
+  const baseAsset = baseAssetOf(symbol);
 
   return (
     <div
@@ -52,6 +58,7 @@ export function OrderBookView({
         <span className="text-right">합계({baseAsset})</span>
       </div>
       <ol
+        ref={sideRef}
         aria-label="매도 호가"
         className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden"
       >
@@ -111,7 +118,7 @@ function BookRowItem({
   side: 'bid' | 'ask';
 }) {
   return (
-    <li className="relative grid shrink-0 grid-cols-3 px-3 py-0.5">
+    <li className="relative grid h-5 shrink-0 grid-cols-3 items-center px-3">
       <span
         aria-hidden
         className={cn(
