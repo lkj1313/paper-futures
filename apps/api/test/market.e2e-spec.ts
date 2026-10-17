@@ -40,11 +40,13 @@ describe('시세 조회 (e2e)', () => {
     const now = Date.now();
     return {
       trade: {
+        id: 1,
         price: '83105.30',
         qty: '0.100',
+        side: 'BUY',
         time: now - 100,
         receivedAt: now,
-      },
+      } as MarketTrade,
       mark: {
         markPrice: '83105.59',
         indexPrice: '83145.80',

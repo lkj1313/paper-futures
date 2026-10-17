@@ -78,7 +78,15 @@ describe('MarketDataWriterService (e2e)', () => {
     const tradeMessage = (price: string) =>
       JSON.stringify({
         stream: 'ethusdt@aggTrade',
-        data: { e: 'aggTrade', s: 'ETHUSDT', p: price, q: '0.010', T: 1 },
+        data: {
+          e: 'aggTrade',
+          s: 'ETHUSDT',
+          a: Number(price),
+          p: price,
+          q: '0.010',
+          T: 1,
+          m: false,
+        },
       });
     const prices = Array.from({ length: RECENT_TRADES_LIMIT + 2 }, (_, i) =>
       String(3000 + i),

@@ -1,3 +1,5 @@
+import type { OrderSide } from './trading.js';
+
 export const SYMBOLS = ['BTCUSDT', 'ETHUSDT'] as const;
 export type MarketSymbol = (typeof SYMBOLS)[number];
 
@@ -23,8 +25,10 @@ export const recentTradesKey = (symbol: MarketSymbol) =>
 
 /** 가장 최근 체결 */
 export interface MarketTrade {
+  id: number;
   price: string;
   qty: string;
+  side: OrderSide;
   time: number;
   receivedAt: number;
 }

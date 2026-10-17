@@ -3,6 +3,7 @@ import {
   type MarketTrade,
   type MarkPriceInfo,
   type OrderBookDepth,
+  OrderSide,
   SYMBOLS,
   type Ticker24h,
 } from '@paper-futures/shared';
@@ -18,9 +19,11 @@ const level = z.tuple([decimal, decimal]);
 const aggTrade = z.object({
   e: z.literal('aggTrade'),
   s: symbol,
+  a: z.number(),
   p: decimal, // 체결가
   q: decimal, // 수량
   T: z.number(), // 체결 시각
+  m: z.boolean(),
 });
 
 const markPriceUpdate = z.object({
@@ -96,7 +99,14 @@ export function parseBinanceMessage(
       return {
         symbol: data.s,
         kind: 'trade',
-        data: { price: data.p, qty: data.q, time: data.T, receivedAt },
+        data: {
+          id: data.a,
+          price: data.p,
+          qty: data.q,
+          side: data.m ? OrderSide.SELL : OrderSide.BUY,
+          time: data.T,
+          receivedAt,
+        },
       };
     case 'markPriceUpdate':
       return {
