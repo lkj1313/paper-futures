@@ -4,6 +4,7 @@ import { useIsLoggedIn, useMe } from '@/entities/session';
 import { LogoutButton } from '@/features/auth';
 import { cn } from '@/shared/lib/utils';
 import { MarketHeader } from '@/widgets/market-header';
+import { OrderBook } from '@/widgets/order-book';
 
 export function TradePage() {
   const { symbol } = useParams();
@@ -50,7 +51,9 @@ export function TradePage() {
       </header>
       <Placeholder label="차트" />
       <div className="grid grid-rows-2 gap-1">
-        <Placeholder label="호가창" />
+        <section className="min-h-0 overflow-hidden rounded-md bg-card">
+          <OrderBook symbol={symbol} />
+        </section>
         <Placeholder label="최근 체결" />
       </div>
       <Placeholder label="주문 · 지갑" className="row-span-2" />
