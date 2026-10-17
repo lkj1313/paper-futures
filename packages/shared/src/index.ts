@@ -3,6 +3,7 @@ export * from './market.js';
 export * from './market-specs.js';
 export * from './trading.js';
 export * from './account.js';
+export * from './orders.js';
 export * from './auth.js';
 export * from './realtime.js';
 export * from './math/decimal.js';

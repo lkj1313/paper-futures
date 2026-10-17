@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { type MarketSymbol, OrderSide, SYMBOLS } from '@paper-futures/shared';
+import {
+  type MarketSymbol,
+  OrderSide,
+  PLACEABLE_ORDER_TYPES,
+  type PlaceableOrderType,
+  type PlaceOrderRequest,
+  SYMBOLS,
+} from '@paper-futures/shared';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
@@ -12,11 +19,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-/** 사용자가 낼 수 있는 주문 유형 (청산은 시스템만) */
-export const PLACEABLE_ORDER_TYPES = ['MARKET', 'LIMIT'] as const;
-export type PlaceableOrderType = (typeof PLACEABLE_ORDER_TYPES)[number];
-
-export class PlaceOrderDto {
+export class PlaceOrderDto implements PlaceOrderRequest {
   @ApiProperty({ enum: SYMBOLS, example: 'BTCUSDT' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.toUpperCase() : value,

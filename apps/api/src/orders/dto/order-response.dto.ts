@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { AccountOrder, AccountPosition } from '@paper-futures/shared';
+import type {
+  AccountOrder,
+  AccountPosition,
+  PlaceOrderResponse,
+} from '@paper-futures/shared';
 import type { Order, Position } from '../../generated/prisma/client.js';
 import {
   OrderSide,
@@ -106,7 +110,7 @@ export class PositionDto implements AccountPosition {
   }
 }
 
-export class PlaceOrderResponseDto {
+export class PlaceOrderResponseDto implements PlaceOrderResponse {
   order: OrderDto;
 
   /** 주문 후의 포지션. 포지션이 없거나 닫았으면 null (대기 주문은 포지션을 바꾸지 않는다) */
