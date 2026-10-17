@@ -16,6 +16,7 @@ import {
   formatQty,
   formatSignedPrice,
 } from '@/shared/lib/format';
+import { baseAssetOf } from '@/shared/lib/symbol';
 import { cn } from '@/shared/lib/utils';
 
 const EMPTY = '--';
@@ -45,7 +46,7 @@ export function MarketHeaderView({
   const stale = isStale(mark?.receivedAt, now);
   const lastPrice = trades[0]?.price ?? ticker?.lastPrice;
   const direction = priceDirection(trades);
-  const baseAsset = symbol.replace(/USDT$/, '');
+  const baseAsset = baseAssetOf(symbol);
 
   return (
     <dl

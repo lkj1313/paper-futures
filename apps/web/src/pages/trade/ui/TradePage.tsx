@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router';
 import { useIsLoggedIn, useMe } from '@/entities/session';
 import { LogoutButton } from '@/features/auth';
 import { cn } from '@/shared/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { MarketHeader } from '@/widgets/market-header';
 import { OrderBook } from '@/widgets/order-book';
+import { RecentTrades } from '@/widgets/recent-trades';
 
 export function TradePage() {
   const { symbol } = useParams();
@@ -50,12 +52,20 @@ export function TradePage() {
         </div>
       </header>
       <Placeholder label="차트" />
-      <div className="grid grid-rows-2 gap-1">
-        <section className="min-h-0 overflow-hidden rounded-md bg-card">
-          <OrderBook symbol={symbol} />
-        </section>
-        <Placeholder label="최근 체결" />
-      </div>
+      <section className="min-h-0 overflow-hidden rounded-md bg-card">
+        <Tabs defaultValue="book" className="h-full gap-0">
+          <TabsList variant="line" className="shrink-0 px-2 pt-2">
+            <TabsTrigger value="book">호가창</TabsTrigger>
+            <TabsTrigger value="trades">최근 체결</TabsTrigger>
+          </TabsList>
+          <TabsContent value="book" className="min-h-0">
+            <OrderBook symbol={symbol} />
+          </TabsContent>
+          <TabsContent value="trades" className="min-h-0">
+            <RecentTrades symbol={symbol} />
+          </TabsContent>
+        </Tabs>
+      </section>
       <Placeholder label="주문 · 지갑" className="row-span-2" />
       <Placeholder
         label="포지션 · 대기 주문 · 주문 내역 · 원장"
