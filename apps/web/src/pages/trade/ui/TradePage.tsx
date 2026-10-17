@@ -1,18 +1,21 @@
-import { SYMBOLS } from '@paper-futures/shared';
+import { isMarketSymbol, SYMBOLS } from '@paper-futures/shared';
 import { Link, useParams } from 'react-router';
 import { useIsLoggedIn, useMe } from '@/entities/session';
 import { LogoutButton } from '@/features/auth';
 import { cn } from '@/shared/lib/utils';
+import { MarketHeader } from '@/widgets/market-header';
 
 export function TradePage() {
   const { symbol } = useParams();
   const isLoggedIn = useIsLoggedIn();
   const { data: me } = useMe();
 
+  if (!isMarketSymbol(symbol)) return null;
+
   return (
     <div className="grid h-screen grid-cols-[minmax(0,1fr)_280px_320px] grid-rows-[auto_minmax(0,1fr)_260px] gap-1 p-1">
       <header className="col-span-3 flex items-center gap-6 rounded-md bg-card px-4 py-3">
-        <nav className="flex gap-1">
+        <nav className="flex shrink-0 gap-1">
           {SYMBOLS.map((s) => (
             <Link
               key={s}
@@ -28,10 +31,8 @@ export function TradePage() {
             </Link>
           ))}
         </nav>
-        <span className="text-sm text-muted-foreground">
-          마크가격 · 24h 변동 · 펀딩비율 · 다음 펀딩까지
-        </span>
-        <div className="ml-auto flex items-center gap-2 text-sm">
+        <MarketHeader symbol={symbol} />
+        <div className="ml-auto flex shrink-0 items-center gap-2 text-sm whitespace-nowrap">
           {isLoggedIn ? (
             <>
               <span className="text-muted-foreground">{me?.email}</span>
