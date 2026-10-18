@@ -21,7 +21,7 @@ const isPositive = (value: string) =>
 const feeRateOf = (type: PlaceableOrderType) =>
   type === 'MARKET' ? FEE_RATES.taker : FEE_RATES.maker;
 
-const reduces = (side: OrderSide, position?: AccountPosition) =>
+export const reduces = (side: OrderSide, position?: AccountPosition) =>
   position !== undefined && (position.side === 'LONG') === (side === 'SELL');
 
 export function orderCost({
