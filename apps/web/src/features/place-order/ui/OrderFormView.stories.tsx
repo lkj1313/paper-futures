@@ -102,13 +102,13 @@ export const HoldingLong: Story = {
     summary: {
       ...OPEN_BOTH,
       SELL: { ...OPEN_BOTH.SELL, reduces: true, cost: null, maxQty: '0.01' },
-      leverage: 5,
+      leverage: 10,
     },
     leverageSlot: (
       <LeverageControl
         symbol="BTCUSDT"
         value={10}
-        locked={5}
+        locked={10}
         onConfirm={async () => undefined}
       />
     ),

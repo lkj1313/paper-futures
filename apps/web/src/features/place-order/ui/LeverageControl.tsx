@@ -33,12 +33,12 @@ export function LeverageControl({
 
   if (locked !== undefined) {
     return (
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" disabled>
+      <div className="flex min-w-0 items-center gap-2">
+        <Button variant="outline" size="sm" disabled className="shrink-0">
           {locked}x
           <Lock />
         </Button>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs break-keep text-muted-foreground">
           {symbol} 포지션이 열려 있어 {locked}배로 고정됩니다
         </span>
       </div>

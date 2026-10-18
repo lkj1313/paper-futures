@@ -62,7 +62,7 @@ export function OrderFormView({
 }: OrderFormViewProps) {
   return (
     <div className="flex flex-col gap-3 p-3 text-sm">
-      {leverageSlot && <div className="flex">{leverageSlot}</div>}
+      {leverageSlot && <div className="flex min-w-0">{leverageSlot}</div>}
       <Tabs
         value={type}
         onValueChange={(value) => onTypeChange(value as PlaceableOrderType)}
@@ -108,6 +108,7 @@ export function OrderFormView({
       </div>
       <Label className="text-xs font-normal">
         <Checkbox
+          aria-label="포지션 줄이기만 (reduceOnly)"
           checked={reduceOnly}
           onCheckedChange={(checked) => onReduceOnlyChange(checked === true)}
         />
