@@ -5,6 +5,10 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 import {
+  type Candle,
+  CANDLE_INTERVALS,
+  type CandleInterval,
+  candleKey,
   MARKET_DATA_KINDS,
   type MarketDataKind,
   type MarketSymbol,
@@ -59,12 +63,31 @@ export class MarketRelayService
       ),
     );
 
+    const candleChannels = new Map(
+      SYMBOLS.flatMap((symbol) =>
+        CANDLE_INTERVALS.map(
+          (interval) =>
+            [
+              this.redis.channel(candleKey(symbol, interval)),
+              { symbol, interval },
+            ] as const,
+        ),
+      ),
+    );
+
     this.subscriber = this.redis.duplicate();
     this.subscriber.on('message', (channel: string, message: string) => {
       const target = channels.get(channel);
-      if (!target) return;
+      const candleTarget = candleChannels.get(channel);
       try {
-        this.receive(target.symbol, target.kind, message);
+        if (target) this.receive(target.symbol, target.kind, message);
+        if (candleTarget) {
+          this.receiveCandle(
+            candleTarget.symbol,
+            candleTarget.interval,
+            message,
+          );
+        }
       } catch (error) {
         this.logger.error(
           `시세 메시지 처리 실패: ${channel}`,
@@ -73,7 +96,10 @@ export class MarketRelayService
       }
     });
     await this.subscriber.connect();
-    await this.subscriber.subscribe(...channels.keys());
+    await this.subscriber.subscribe(
+      ...channels.keys(),
+      ...candleChannels.keys(),
+    );
 
     this.timer = setInterval(() => this.flush(), BATCH_INTERVAL_MS);
   }
@@ -108,6 +134,18 @@ export class MarketRelayService
         });
         return;
     }
+  }
+
+  receiveCandle(
+    symbol: MarketSymbol,
+    interval: CandleInterval,
+    message: string,
+  ) {
+    this.gateway.sendCandle({
+      symbol,
+      interval,
+      candle: JSON.parse(message) as Candle,
+    });
   }
 
   /** 모아 둔 체결과 호가를 보내고 비운다 */

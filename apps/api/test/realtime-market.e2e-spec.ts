@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type {
+  CandleEvent,
   DepthEvent,
   MarkEvent,
   TickerEvent,
@@ -10,12 +11,14 @@ import {
   connectRealtime,
   createTestApp,
   listenForRealtime,
+  publishCandle,
   publishDepth,
   publishMark,
   publishTicker,
   publishTrade,
   type RealtimeClient,
   resetData,
+  seedCandle,
   seedDepth,
   seedMark,
   seedRecentTrades,
@@ -149,5 +152,78 @@ describe('실시간 시세 (e2e)', () => {
     await publishMark(app, 'BTCUSDT', '83000');
 
     expect(await marks).toEqual([]);
+  });
+
+  describe('캔들', () => {
+    it('종목·봉 간격 방에 들어가면 그 종목, 그 간격의 봉만 받는다', async () => {
+      const client = await connect();
+      expect(
+        await client.emitWithAck('subscribeCandles', {
+          symbol: 'BTCUSDT',
+          interval: '15m',
+        }),
+      ).toEqual({ ok: true });
+
+      const candles = collect<CandleEvent>(client, 'candle');
+      await publishCandle(app, 'ETHUSDT', '15m', '2600.00');
+      await publishCandle(app, 'BTCUSDT', '1h', '83100.00');
+      await publishCandle(app, 'BTCUSDT', '15m', '83200.00');
+
+      expect(
+        (await candles).map((c) => [c.symbol, c.interval, c.candle.close]),
+      ).toEqual([['BTCUSDT', '15m', '83200.00']]);
+    });
+
+    it('시세 방에만 들어간 연결은 봉을 받지 않는다', async () => {
+      const client = await connect();
+      await client.emitWithAck('subscribe', 'BTCUSDT');
+
+      const candles = collect<CandleEvent>(client, 'candle');
+      await publishCandle(app, 'BTCUSDT', '15m', '83200.00');
+
+      expect(await candles).toEqual([]);
+    });
+
+    it('방에 들어가자마자 저장된 최신 봉을 받는다', async () => {
+      await seedCandle(app, 'BTCUSDT', '1h', '83300.00');
+      const client = await connect();
+
+      const candles = collect<CandleEvent>(client, 'candle');
+      await client.emitWithAck('subscribeCandles', {
+        symbol: 'BTCUSDT',
+        interval: '1h',
+      });
+
+      expect((await candles).map((c) => c.candle.close)).toEqual(['83300.00']);
+    });
+
+    it('지원하지 않는 종목이나 봉 간격은 거부한다', async () => {
+      const client = await connect();
+
+      expect(
+        await client.emitWithAck('subscribeCandles', {
+          symbol: 'DOGEUSDT' as never,
+          interval: '15m',
+        }),
+      ).toEqual({ ok: false, message: '지원하지 않는 종목입니다.' });
+      expect(
+        await client.emitWithAck('subscribeCandles', {
+          symbol: 'BTCUSDT',
+          interval: '3m' as never,
+        }),
+      ).toEqual({ ok: false, message: '지원하지 않는 봉 간격입니다.' });
+    });
+
+    it('방에서 나가면 더 이상 받지 않는다', async () => {
+      const client = await connect();
+      const target = { symbol: 'BTCUSDT', interval: '15m' } as const;
+      await client.emitWithAck('subscribeCandles', target);
+      await client.emitWithAck('unsubscribeCandles', target);
+
+      const candles = collect<CandleEvent>(client, 'candle');
+      await publishCandle(app, 'BTCUSDT', '15m', '83200.00');
+
+      expect(await candles).toEqual([]);
+    });
   });
 });

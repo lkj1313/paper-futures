@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
+  type Candle,
+  type CandleInterval,
+  candleKey,
   isStale,
   type MarketDataKind,
   type MarketSymbol,
@@ -55,6 +58,10 @@ export class MarketService {
         stale: isStale(mark?.receivedAt, now),
       };
     });
+  }
+
+  async getCandle(symbol: MarketSymbol, interval: CandleInterval) {
+    return parse<Candle>(await this.redis.get(candleKey(symbol, interval)));
   }
 
   /** 한 종목의 최근 체결 목록(오래된 것부터), 마크가격, 호가, 24시간 통계를 읽는다. 받은 적 없으면 undefined */

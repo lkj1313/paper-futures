@@ -6,6 +6,9 @@ import {
   type TestingModuleBuilder,
 } from '@nestjs/testing';
 import {
+  type Candle,
+  type CandleInterval,
+  candleKey,
   type ClientToServerEvents,
   type MarketSymbol,
   type MarketTrade,
@@ -275,6 +278,39 @@ export async function publishDepth(
   await redis.publish(
     redis.channel(marketKey(symbol, 'depth')),
     JSON.stringify(depth),
+  );
+}
+
+export const candleInfo = (close: string): Candle => ({
+  time: 1792329300000,
+  open: '83000.00',
+  high: '83500.00',
+  low: '82500.00',
+  close,
+  volume: '100.000',
+});
+
+export async function seedCandle(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  interval: CandleInterval,
+  close: string,
+) {
+  await app
+    .get(RedisService)
+    .set(candleKey(symbol, interval), JSON.stringify(candleInfo(close)));
+}
+
+export async function publishCandle(
+  app: INestApplication,
+  symbol: MarketSymbol,
+  interval: CandleInterval,
+  close: string,
+) {
+  const redis = app.get(RedisService);
+  await redis.publish(
+    redis.channel(candleKey(symbol, interval)),
+    JSON.stringify(candleInfo(close)),
   );
 }
 
