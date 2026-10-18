@@ -4,7 +4,6 @@ import {
   type MarketTrade,
   type MarkPriceInfo,
   type Ticker24h,
-  toDecimal,
 } from '@paper-futures/shared';
 import { priceDirection } from '@/entities/market';
 import {
@@ -17,16 +16,10 @@ import {
   formatSignedPrice,
 } from '@/shared/lib/format';
 import { baseAssetOf } from '@/shared/lib/symbol';
+import { toneOf } from '@/shared/lib/tone';
 import { cn } from '@/shared/lib/utils';
 
 const EMPTY = '--';
-
-const toneOf = (value: string) => {
-  const sign = toDecimal(value).cmp(0);
-  if (sign > 0) return 'text-up';
-  if (sign < 0) return 'text-down';
-  return undefined;
-};
 
 export interface MarketHeaderViewProps {
   symbol: MarketSymbol;

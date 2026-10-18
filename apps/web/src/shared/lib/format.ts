@@ -47,8 +47,14 @@ export const formatSignedPrice = (symbol: MarketSymbol, value: string) =>
 export const formatUsdt = (value: string) =>
   fixed(2).format(value as NumericString);
 
+export const formatSignedUsdt = (value: string) =>
+  fixed(2, 'exceptZero').format(value as NumericString);
+
 export const formatPercent = (value: string) =>
   `${fixed(2, 'exceptZero').format(value as NumericString)}%`;
+
+export const formatRatioPercent = (value: string) =>
+  formatPercent(toDecimal(value).times(100).toString());
 
 export const formatFundingRate = (value: string) =>
   `${fixed(4).format(toDecimal(value).times(100).toString() as NumericString)}%`;
@@ -66,4 +72,9 @@ export function formatCountdown(ms: number) {
 export function formatTime(ms: number) {
   const date = new Date(ms);
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+export function formatDateTime(ms: number) {
+  const date = new Date(ms);
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${formatTime(ms)}`;
 }

@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   formatCompact,
   formatCountdown,
+  formatDateTime,
   formatFundingRate,
   formatPercent,
   formatPrice,
   formatQty,
+  formatRatioPercent,
   formatSignedPrice,
+  formatSignedUsdt,
   formatTime,
   formatUsdt,
 } from './format';
@@ -95,5 +98,32 @@ describe('formatTime', () => {
     expect(formatTime(new Date(2026, 9, 16, 9, 5, 3).getTime())).toBe(
       '09:05:03',
     );
+  });
+});
+
+describe('formatDateTime', () => {
+  it('시각을 이 컴퓨터 시간대의 월-일 시:분:초로 보여 준다', () => {
+    expect(formatDateTime(new Date(2026, 9, 18, 19, 5, 12).getTime())).toBe(
+      '10-18 19:05:12',
+    );
+    expect(formatDateTime(new Date(2026, 0, 3, 9, 5, 3).getTime())).toBe(
+      '01-03 09:05:03',
+    );
+  });
+});
+
+describe('formatSignedUsdt', () => {
+  it('소수 둘째 자리까지, 0이 아니면 부호를 붙인다', () => {
+    expect(formatSignedUsdt('5')).toBe('+5.00');
+    expect(formatSignedUsdt('-1234.567')).toBe('-1,234.57');
+    expect(formatSignedUsdt('0')).toBe('0.00');
+  });
+});
+
+describe('formatRatioPercent', () => {
+  it('비율을 백분율로 바꿔 소수 둘째 자리까지, 부호를 붙여 보여 준다', () => {
+    expect(formatRatioPercent('0.0617')).toBe('+6.17%');
+    expect(formatRatioPercent('-0.24090216')).toBe('-24.09%');
+    expect(formatRatioPercent('0')).toBe('0.00%');
   });
 });
