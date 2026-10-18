@@ -13,6 +13,7 @@ export * from './math/rounding.js';
 export * from './math/margin.js';
 export * from './math/pnl.js';
 export * from './math/liquidation.js';
+export * from './math/position-live.js';
 export * from './math/fill.js';
 export * from './math/funding.js';
 

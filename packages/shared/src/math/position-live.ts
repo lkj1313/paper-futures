@@ -1,11 +1,7 @@
-import {
-  type DecimalLike,
-  isStale,
-  type MarkPriceInfo,
-  type PositionSide,
-  roe,
-  unrealizedPnl,
-} from '@paper-futures/shared';
+import { isStale, type MarkPriceInfo } from '../market.js';
+import type { PositionSide } from '../trading.js';
+import type { DecimalLike } from './decimal.js';
+import { roe, unrealizedPnl } from './pnl.js';
 
 type Amount = DecimalLike | { toString(): string };
 

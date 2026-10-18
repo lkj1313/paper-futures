@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { MarketSymbol } from '@paper-futures/shared';
+import { type MarketSymbol, toPositionLiveValues } from '@paper-futures/shared';
 import { MarketService } from '../market/market.service.js';
 import { PositionDto } from '../orders/dto/order-response.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { PositionViewDto } from './dto/position-view.dto.js';
-import { toPositionLiveValues } from './position-view.js';
 
 @Injectable()
 export class PositionsService {

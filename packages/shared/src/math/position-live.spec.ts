@@ -1,5 +1,6 @@
-import type { MarkPriceInfo } from '@paper-futures/shared';
-import { toPositionLiveValues } from './position-view.js';
+import { describe, expect, it } from 'vitest';
+import type { MarkPriceInfo } from '../market.js';
+import { toPositionLiveValues } from './position-live.js';
 
 const now = 1_000_000;
 const mark = (markPrice: string, receivedAt = now): MarkPriceInfo => ({
