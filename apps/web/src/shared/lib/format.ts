@@ -44,6 +44,9 @@ export const formatQty = (symbol: MarketSymbol, value: string) =>
 export const formatSignedPrice = (symbol: MarketSymbol, value: string) =>
   fixed(priceDigits(symbol), 'exceptZero').format(value as NumericString);
 
+export const formatUsdt = (value: string) =>
+  fixed(2).format(value as NumericString);
+
 export const formatPercent = (value: string) =>
   `${fixed(2, 'exceptZero').format(value as NumericString)}%`;
 

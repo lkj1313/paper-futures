@@ -8,6 +8,7 @@ import {
   formatQty,
   formatSignedPrice,
   formatTime,
+  formatUsdt,
 } from './format';
 
 describe('formatPrice', () => {
@@ -55,6 +56,14 @@ describe('formatFundingRate', () => {
     expect(formatFundingRate('0.00003092')).toBe('0.0031%');
     expect(formatFundingRate('-0.00002539')).toBe('-0.0025%');
     expect(formatFundingRate('0.0001')).toBe('0.0100%');
+  });
+});
+
+describe('formatUsdt', () => {
+  it('USDT 금액은 소수 둘째 자리까지 천 단위 쉼표를 찍는다', () => {
+    expect(formatUsdt('9918.44')).toBe('9,918.44');
+    expect(formatUsdt('81.72813')).toBe('81.73');
+    expect(formatUsdt('0')).toBe('0.00');
   });
 });
 
