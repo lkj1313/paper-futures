@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createFakeSocket } from '@/test/fake-socket';
 import { createTestQueryClient } from '@/test/render';
 import { openOrdersQueryKey } from '../api/use-open-orders';
+import { orderHistoryQueryKey } from '../api/use-order-history';
 import { bindOrderEvents } from './bind-order-events';
 
 const order = (
@@ -32,6 +33,7 @@ function setup(openOrders?: AccountOrder[]) {
   const { socket, receive } = createFakeSocket();
   bindOrderEvents(socket, client);
   if (openOrders) client.setQueryData(openOrdersQueryKey, openOrders);
+  client.setQueryData(orderHistoryQueryKey, { pages: [], pageParams: [] });
   return { client, receive };
 }
 
@@ -73,11 +75,25 @@ describe('bindOrderEvents', () => {
     expect(client.getQueryData(openOrdersQueryKey)).toBeUndefined();
   });
 
-  it('다시 연결되면 대기 주문을 낡은 것으로 표시해 다시 받게 한다', () => {
+  it('주문이 바뀌면 주문 내역을 낡은 것으로 표시하고, 대기 주문은 다시 받지 않는다', () => {
+    const { client, receive } = setup([order('order-1')]);
+
+    receive('orders', { orders: [order('order-1', { status: 'FILLED' })] });
+
+    expect(client.getQueryState(orderHistoryQueryKey)?.isInvalidated).toBe(
+      true,
+    );
+    expect(client.getQueryState(openOrdersQueryKey)?.isInvalidated).toBe(false);
+  });
+
+  it('다시 연결되면 대기 주문과 주문 내역을 낡은 것으로 표시해 다시 받게 한다', () => {
     const { client, receive } = setup([order('order-1')]);
 
     receive('connect');
 
     expect(client.getQueryState(openOrdersQueryKey)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(orderHistoryQueryKey)?.isInvalidated).toBe(
+      true,
+    );
   });
 });
