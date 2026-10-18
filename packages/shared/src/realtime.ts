@@ -5,6 +5,8 @@ import type {
 } from './account.js';
 import type { ErrorCode } from './errors.js';
 import type {
+  Candle,
+  CandleInterval,
   MarketSymbol,
   MarketTrade,
   MarkPriceInfo,
@@ -48,6 +50,15 @@ export interface TickerEvent extends Ticker24h {
   symbol: MarketSymbol;
 }
 
+export interface CandleTarget {
+  symbol: MarketSymbol;
+  interval: CandleInterval;
+}
+
+export interface CandleEvent extends CandleTarget {
+  candle: Candle;
+}
+
 /** 구독 요청 결과 */
 export type SubscribeAck = { ok: true } | { ok: false; message: string };
 
@@ -57,6 +68,7 @@ export interface ServerToClientEvents {
   mark: (event: MarkEvent) => void;
   depth: (event: DepthEvent) => void;
   ticker: (event: TickerEvent) => void;
+  candle: (event: CandleEvent) => void;
 
   // 아래는 로그인한 연결만 받는다
   /** 내 주문이 바뀜 (넣음, 체결, 취소, 시스템 취소, 청산) */
@@ -73,4 +85,12 @@ export interface ClientToServerEvents {
   /** 종목 시세 방에 들어간다. 들어가자마자 저장된 최신 시세를 한 번 받는다 */
   subscribe: (symbol: string, ack: (result: SubscribeAck) => void) => void;
   unsubscribe: (symbol: string, ack: (result: SubscribeAck) => void) => void;
+  subscribeCandles: (
+    target: CandleTarget,
+    ack: (result: SubscribeAck) => void,
+  ) => void;
+  unsubscribeCandles: (
+    target: CandleTarget,
+    ack: (result: SubscribeAck) => void,
+  ) => void;
 }
