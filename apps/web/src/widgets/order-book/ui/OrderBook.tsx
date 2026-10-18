@@ -5,6 +5,7 @@ import {
   useMarketSubscription,
   useRecentTrades,
 } from '@/entities/market';
+import { useOrderDraft } from '@/features/place-order';
 import { useNow } from '@/shared/lib/use-now';
 import { useThrottledValue } from '@/shared/lib/use-throttled-value';
 import { OrderBookView } from './OrderBookView';
@@ -17,6 +18,7 @@ export function OrderBook({ symbol }: { symbol: MarketSymbol }) {
   const trades = useThrottledValue(useRecentTrades(symbol), REDRAW_MS);
   const mark = useMark(symbol);
   const now = useNow(1000);
+  const pickPrice = useOrderDraft((state) => state.pickPrice);
 
   return (
     <OrderBookView
@@ -25,6 +27,7 @@ export function OrderBook({ symbol }: { symbol: MarketSymbol }) {
       trades={trades}
       mark={mark}
       now={now}
+      onPriceClick={(price) => pickPrice(symbol, price)}
     />
   );
 }

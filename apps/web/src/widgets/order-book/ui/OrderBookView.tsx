@@ -24,6 +24,7 @@ export interface OrderBookViewProps {
   trades: MarketTrade[];
   mark?: MarkPriceInfo;
   now: number;
+  onPriceClick?: (price: string) => void;
 }
 
 export function OrderBookView({
@@ -32,6 +33,7 @@ export function OrderBookView({
   trades,
   mark,
   now,
+  onPriceClick,
 }: OrderBookViewProps) {
   const stale = isStale(depth?.receivedAt, now);
   const [sideRef, sideHeight] = useElementHeight<HTMLOListElement>();
@@ -43,6 +45,18 @@ export function OrderBookView({
   const lastPrice = trades[0]?.price;
   const direction = priceDirection(trades);
   const baseAsset = baseAssetOf(symbol);
+  const midPriceClass = cn(
+    'flex items-center gap-1 text-base font-semibold',
+    direction === 'up' && 'text-up',
+    direction === 'down' && 'text-down',
+  );
+  const midPrice = (
+    <>
+      {lastPrice ? formatPrice(symbol, lastPrice) : EMPTY}
+      {direction === 'up' && <ArrowUp aria-hidden className="size-4" />}
+      {direction === 'down' && <ArrowDown aria-hidden className="size-4" />}
+    </>
+  );
 
   return (
     <div
@@ -63,29 +77,43 @@ export function OrderBookView({
         className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden"
       >
         {asks.toReversed().map((row) => (
-          <BookRowItem key={row.price} symbol={symbol} row={row} side="ask" />
+          <BookRowItem
+            key={row.price}
+            symbol={symbol}
+            row={row}
+            side="ask"
+            onPick={onPriceClick}
+          />
         ))}
       </ol>
       <div className="flex shrink-0 items-baseline gap-3 border-y border-border px-3 py-1.5">
-        <span
-          aria-label="현재가"
-          className={cn(
-            'flex items-center gap-1 text-base font-semibold',
-            direction === 'up' && 'text-up',
-            direction === 'down' && 'text-down',
-          )}
-        >
-          {lastPrice ? formatPrice(symbol, lastPrice) : EMPTY}
-          {direction === 'up' && <ArrowUp aria-hidden className="size-4" />}
-          {direction === 'down' && <ArrowDown aria-hidden className="size-4" />}
-        </span>
+        {onPriceClick && lastPrice ? (
+          <button
+            type="button"
+            aria-label="현재가"
+            className={cn(midPriceClass, 'cursor-pointer hover:opacity-80')}
+            onClick={() => onPriceClick(lastPrice)}
+          >
+            {midPrice}
+          </button>
+        ) : (
+          <span aria-label="현재가" className={midPriceClass}>
+            {midPrice}
+          </span>
+        )}
         <span aria-label="마크가격" className="text-muted-foreground">
           {mark ? formatPrice(symbol, mark.markPrice) : EMPTY}
         </span>
       </div>
       <ol aria-label="매수 호가" className="min-h-0 flex-1 overflow-hidden">
         {bids.map((row) => (
-          <BookRowItem key={row.price} symbol={symbol} row={row} side="bid" />
+          <BookRowItem
+            key={row.price}
+            symbol={symbol}
+            row={row}
+            side="bid"
+            onPick={onPriceClick}
+          />
         ))}
       </ol>
       <div
@@ -108,17 +136,21 @@ export function OrderBookView({
   );
 }
 
+const ROW_LAYOUT = 'relative grid h-5 w-full grid-cols-3 items-center px-3';
+
 function BookRowItem({
   symbol,
   row,
   side,
+  onPick,
 }: {
   symbol: MarketSymbol;
   row: BookRow;
   side: 'bid' | 'ask';
+  onPick?: (price: string) => void;
 }) {
-  return (
-    <li className="relative grid h-5 shrink-0 grid-cols-3 items-center px-3">
+  const content = (
+    <>
       <span
         aria-hidden
         className={cn(
@@ -136,6 +168,26 @@ function BookRowItem({
       <span className="relative text-right">
         {formatQty(symbol, row.total)}
       </span>
+    </>
+  );
+
+  return (
+    <li className="shrink-0">
+      {onPick ? (
+        <button
+          type="button"
+          aria-label={`${formatPrice(symbol, row.price)}에 지정가 주문`}
+          className={cn(
+            ROW_LAYOUT,
+            'cursor-pointer text-left hover:bg-muted/60',
+          )}
+          onClick={() => onPick(row.price)}
+        >
+          {content}
+        </button>
+      ) : (
+        <div className={ROW_LAYOUT}>{content}</div>
+      )}
     </li>
   );
 }
