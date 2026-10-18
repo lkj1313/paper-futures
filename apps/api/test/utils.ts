@@ -98,6 +98,23 @@ export async function signupAndLogin(
   return res.body.accessToken;
 }
 
+export async function setLeverage(
+  app: INestApplication,
+  token: string,
+  symbol: MarketSymbol,
+  leverage: number,
+) {
+  const res = await request(app.getHttpServer())
+    .put(`/api/leverage/${symbol}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ leverage });
+  if (res.status !== 200) {
+    throw new Error(
+      `레버리지 설정 실패: ${res.status} ${JSON.stringify(res.body)}`,
+    );
+  }
+}
+
 /** market-data 프로세스 대신 테스트용 Redis에 호가를 넣는다 */
 export async function seedDepth(
   app: INestApplication,

@@ -9,6 +9,7 @@ import {
   resetData,
   seedDepth,
   seedMark,
+  setLeverage,
   signupAndLogin,
 } from './utils.js';
 
@@ -20,6 +21,7 @@ describe('청산 감시: 마크가격 구독 (e2e)', () => {
   /** 50배 롱 0.1개를 83,000.5에 연다 → 청산가 81,667.15863454 */
   const openLong = async () => {
     const token = await signupAndLogin(app);
+    await setLeverage(app, token, 'BTCUSDT', 50);
     await seedDepth(app, 'BTCUSDT', {
       bids: [['82999', '1']],
       asks: [
@@ -35,7 +37,6 @@ describe('청산 감시: 마크가격 구독 (e2e)', () => {
         side: 'BUY',
         type: 'MARKET',
         qty: '0.1',
-        leverage: 50,
       });
     expect(res.status).toBe(201);
     expect(res.body.position.liquidationPrice).toBe('81667.15863454');

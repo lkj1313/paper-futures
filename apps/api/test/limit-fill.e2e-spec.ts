@@ -87,7 +87,7 @@ describe('지정가 대기 주문 체결 (e2e)', () => {
   });
 
   it('매수: 최저 체결가가 지정가 이하면 지정가로 체결한다 (메이커 수수료, 묶인 금액 풀림)', async () => {
-    const placed = await order({ side: 'BUY', price: '80000', leverage: 10 });
+    const placed = await order({ side: 'BUY', price: '80000' });
     expect((await wallet()).openOrderMargin).toBe('801.6');
 
     expect(
@@ -135,7 +135,7 @@ describe('지정가 대기 주문 체결 (e2e)', () => {
 
   it('매도 익절(reduceOnly): 최고 체결가가 지정가 이상이면 포지션을 닫고 손익을 확정한다', async () => {
     // 롱 0.1개 83,000.5 (잔고 9,995.849975)
-    await order({ type: 'MARKET', side: 'BUY', leverage: 10 });
+    await order({ type: 'MARKET', side: 'BUY' });
     const tp = await order({ side: 'SELL', price: '90000', reduceOnly: true });
 
     expect(
@@ -152,7 +152,7 @@ describe('지정가 대기 주문 체결 (e2e)', () => {
   });
 
   it('체결하려는 순간 조건이 안 맞으면 시스템 취소(EXPIRED): 이미 닫힌 포지션의 익절 주문', async () => {
-    await order({ type: 'MARKET', side: 'BUY', leverage: 10 });
+    await order({ type: 'MARKET', side: 'BUY' });
     const tp = await order({ side: 'SELL', price: '90000', reduceOnly: true });
     // 사용자가 시장가로 먼저 닫음
     await order({ type: 'MARKET', side: 'SELL', reduceOnly: true });

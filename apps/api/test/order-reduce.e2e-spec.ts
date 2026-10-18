@@ -47,7 +47,7 @@ describe('포지션 줄이기, 닫기 (e2e)', () => {
   /** 롱 0.1개를 83,000.5에 연다 (증거금 830.005, 수수료 4.150025, 잔고 9,995.849975) */
   const openLong = async () => {
     await seedDepth(app, 'BTCUSDT', openBook);
-    const res = await order({ side: 'BUY', qty: '0.1', leverage: 10 });
+    const res = await order({ side: 'BUY', qty: '0.1' });
     expect(res.status).toBe(201);
   };
 

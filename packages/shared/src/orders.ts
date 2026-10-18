@@ -11,7 +11,6 @@ export interface PlaceOrderRequest {
   type: PlaceableOrderType;
   qty: string;
   price?: string;
-  leverage?: number;
   reduceOnly?: boolean;
 }
 

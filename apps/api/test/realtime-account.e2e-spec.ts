@@ -61,7 +61,7 @@ describe('실시간 내 계정 이벤트 (e2e)', () => {
     request(app.getHttpServer())
       .post('/api/orders')
       .set('Authorization', `Bearer ${token}`)
-      .send({ symbol: 'BTCUSDT', qty: '0.1', leverage: 10, ...body });
+      .send({ symbol: 'BTCUSDT', qty: '0.1', ...body });
   /**
    * 롱을 열고, 그 이벤트(지갑이 마지막)까지 다 받은 뒤에 돌아온다.
    * REST 응답이 실시간 이벤트보다 먼저 오므로, 기다리지 않으면 다음에 모으는 이벤트에 섞인다

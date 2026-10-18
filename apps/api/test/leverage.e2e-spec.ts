@@ -120,4 +120,45 @@ describe('레버리지 설정 (e2e)', () => {
     expect((await putLeverage('ETHUSDT', { leverage: 20 })).status).toBe(200);
     expect((await getLeverage()).body).toEqual({ BTCUSDT: 10, ETHUSDT: 20 });
   });
+
+  describe('주문은 저장된 레버리지를 쓴다', () => {
+    const placeOrder = (body: object) =>
+      request(app.getHttpServer())
+        .post('/api/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ symbol: 'BTCUSDT', side: 'BUY', qty: '0.002', ...body });
+
+    it('저장한 레버리지로 포지션을 연다', async () => {
+      await putLeverage('BTCUSDT', { leverage: 20 });
+
+      const res = await placeOrder({ type: 'MARKET' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.order.leverage).toBe(20);
+      expect(res.body.position).toMatchObject({
+        leverage: 20,
+        isolatedMargin: '8.3',
+      });
+    });
+
+    it('지정가 주문도 저장한 레버리지로 증거금을 묶는다', async () => {
+      await putLeverage('BTCUSDT', { leverage: 20 });
+
+      const res = await placeOrder({ type: 'LIMIT', price: '80000' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.order).toMatchObject({
+        status: 'NEW',
+        leverage: 20,
+        reservedMargin: '8.032',
+      });
+    });
+
+    it('주문 요청에 레버리지를 실으면 거부한다', async () => {
+      const res = await placeOrder({ type: 'MARKET', leverage: 20 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+    });
+  });
 });

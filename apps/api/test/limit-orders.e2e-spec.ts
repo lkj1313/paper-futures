@@ -5,6 +5,7 @@ import {
   createTestApp,
   resetData,
   seedDepth,
+  setLeverage,
   signupAndLogin,
 } from './utils.js';
 
@@ -56,7 +57,7 @@ describe('지정가 주문: 대기, 취소, 조회 (e2e)', () => {
   });
 
   it('지금 체결될 수 없는 가격이면 대기(NEW)로 저장하고 증거금 + 수수료를 묶는다', async () => {
-    const res = await order({ price: '80000', qty: '0.1', leverage: 10 });
+    const res = await order({ price: '80000', qty: '0.1' });
 
     // 8,000 ÷ 10 = 800 (증거금) + 8,000 × 0.02% = 1.6 (메이커 수수료)
     expect(res.status).toBe(201);
@@ -86,17 +87,19 @@ describe('지정가 주문: 대기, 취소, 조회 (e2e)', () => {
 
   it('묶인 금액은 시장가 주문에 쓸 수 없다', async () => {
     // 1배로 묶기: 8,000 + 1.6 → 남은 주문 가능 금액 1,998.4
-    await order({ price: '80000', qty: '0.1', leverage: 1 });
+    await setLeverage(app, token, 'BTCUSDT', 1);
+    await order({ price: '80000', qty: '0.1' });
 
     // 시장가 0.03개 1배: 증거금 2,490 + 수수료 1.245 > 1,998.4
-    const res = await order({ type: 'MARKET', qty: '0.03', leverage: 1 });
+    const res = await order({ type: 'MARKET', qty: '0.03' });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INSUFFICIENT_MARGIN');
   });
 
   it('묶을 금액이 주문 가능 금액보다 크면 400 INSUFFICIENT_MARGIN', async () => {
-    const res = await order({ price: '80000', qty: '0.2', leverage: 1 }); // 16,003.2
+    await setLeverage(app, token, 'BTCUSDT', 1);
+    const res = await order({ price: '80000', qty: '0.2' }); // 16,003.2
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INSUFFICIENT_MARGIN');
@@ -169,7 +172,7 @@ describe('지정가 주문: 대기, 취소, 조회 (e2e)', () => {
     });
 
     it('롱을 줄이는 매도 지정가(익절)는 돈을 묶지 않는다', async () => {
-      await order({ type: 'MARKET', qty: '0.1', leverage: 10 });
+      await order({ type: 'MARKET', qty: '0.1' });
       const before = await wallet();
 
       const res = await order({
@@ -188,7 +191,7 @@ describe('지정가 주문: 대기, 취소, 조회 (e2e)', () => {
     });
 
     it('reduceOnly가 아닌데 포지션보다 크면 400 POSITION_FLIP_NOT_SUPPORTED', async () => {
-      await order({ type: 'MARKET', qty: '0.1', leverage: 10 });
+      await order({ type: 'MARKET', qty: '0.1' });
 
       const res = await order({ side: 'SELL', price: '90000', qty: '0.2' });
 
@@ -205,7 +208,11 @@ describe('지정가 주문: 대기, 취소, 조회 (e2e)', () => {
       { qty: '0.001' },
       'INVALID_ORDER_QTY',
     ],
-    ['최대 레버리지 초과', { leverage: 126 }, 'VALIDATION_ERROR'],
+    [
+      '레버리지를 실음 (설정 API로만 정함)',
+      { leverage: 10 },
+      'VALIDATION_ERROR',
+    ],
   ])('%s → 400 %s', async (_, body, code) => {
     const res = await order({ price: '80000', qty: '0.1', ...body });
 
@@ -216,7 +223,7 @@ describe('지정가 주문: 대기, 취소, 조회 (e2e)', () => {
   describe('넣자마자 체결될 가격', () => {
     it('매수: 지정가 이하 매도 호가로 바로 체결한다 (테이커 수수료, 묶는 금액 없음)', async () => {
       // 매도 호가 83,000(0.05개), 83,001(0.1개) → 83,001 이하로 0.1개 채움
-      const res = await order({ price: '83001', qty: '0.1', leverage: 10 });
+      const res = await order({ price: '83001', qty: '0.1' });
 
       // 83,000 × 0.05 + 83,001 × 0.05 = 8,300.05 → 평균 83,000.5, 수수료 × 0.05%
       expect(res.status).toBe(201);

@@ -59,7 +59,6 @@ describe('포지션, 주문 조회 (e2e)', () => {
         symbol: 'BTCUSDT',
         side: 'BUY',
         qty: '0.1',
-        leverage: 10,
       });
       await seedMark(app, 'BTCUSDT', '85000');
 
@@ -89,7 +88,6 @@ describe('포지션, 주문 조회 (e2e)', () => {
         symbol: 'BTCUSDT',
         side: 'BUY',
         qty: '0.1',
-        leverage: 10,
       });
 
       const [position] = (await get('/api/positions', alice)).body;
