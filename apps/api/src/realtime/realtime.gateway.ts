@@ -12,8 +12,12 @@ import {
   type AccountOrder,
   type AccountPosition,
   type AccountWallet,
+  type CandleEvent,
+  type CandleInterval,
+  type CandleTarget,
   type ClientToServerEvents,
   type DepthEvent,
+  isCandleInterval,
   isMarketSymbol,
   type MarkEvent,
   type MarketSymbol,
@@ -55,10 +59,25 @@ const marketRoom = (symbol: MarketSymbol) => `market:${symbol}`;
 /** 사용자 방 이름. 한 사용자가 여러 탭으로 연결해도 모두 받는다 */
 const userRoom = (userId: string) => `user:${userId}`;
 
+const candleRoom = (symbol: MarketSymbol, interval: CandleInterval) =>
+  `candles:${symbol}:${interval}`;
+
 const UNKNOWN_SYMBOL: SubscribeAck = {
   ok: false,
   message: '지원하지 않는 종목입니다.',
 };
+
+const UNKNOWN_INTERVAL: SubscribeAck = {
+  ok: false,
+  message: '지원하지 않는 봉 간격입니다.',
+};
+
+function readCandleTarget(body: unknown): CandleTarget | SubscribeAck {
+  const { symbol, interval } = (body ?? {}) as Record<string, unknown>;
+  if (!isMarketSymbol(symbol)) return UNKNOWN_SYMBOL;
+  if (!isCandleInterval(interval)) return UNKNOWN_INTERVAL;
+  return { symbol, interval };
+}
 
 /**
  * 웹 브라우저와의 실시간 연결 (경로와 CORS는 SocketIoAdapter에서 정한다)
@@ -143,6 +162,32 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     return { ok: true };
   }
 
+  @SubscribeMessage('subscribeCandles')
+  async subscribeCandles(
+    @ConnectedSocket() socket: RealtimeSocket,
+    @MessageBody() body: unknown,
+  ): Promise<SubscribeAck> {
+    const target = readCandleTarget(body);
+    if ('ok' in target) return target;
+    const { symbol, interval } = target;
+    await socket.join(candleRoom(symbol, interval));
+
+    const candle = await this.market.getCandle(symbol, interval);
+    if (candle) socket.emit('candle', { symbol, interval, candle });
+    return { ok: true };
+  }
+
+  @SubscribeMessage('unsubscribeCandles')
+  async unsubscribeCandles(
+    @ConnectedSocket() socket: RealtimeSocket,
+    @MessageBody() body: unknown,
+  ): Promise<SubscribeAck> {
+    const target = readCandleTarget(body);
+    if ('ok' in target) return target;
+    await socket.leave(candleRoom(target.symbol, target.interval));
+    return { ok: true };
+  }
+
   sendTrades(event: TradesEvent) {
     this.server.to(marketRoom(event.symbol)).emit('trades', event);
   }
@@ -157,6 +202,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
 
   sendTicker(event: TickerEvent) {
     this.server.to(marketRoom(event.symbol)).emit('ticker', event);
+  }
+
+  sendCandle(event: CandleEvent) {
+    this.server
+      .to(candleRoom(event.symbol, event.interval))
+      .emit('candle', event);
   }
 
   /** 이 사용자가 지금 연결돼 있는지 (없으면 보낼 필요가 없다) */

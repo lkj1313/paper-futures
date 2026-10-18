@@ -1,4 +1,8 @@
-import { buildStreamUrl, parseBinanceMessage } from './binance.parser.js';
+import {
+  buildStreamUrl,
+  parseBinanceKlines,
+  parseBinanceMessage,
+} from './binance.parser.js';
 
 // 실제 Binance 선물 WebSocket에서 받은 메시지 (필드 일부 생략)
 const samples = {
@@ -73,6 +77,33 @@ const samples = {
       F: 8125000000,
       L: 8128000000,
       n: 3000001,
+    },
+  },
+  kline: {
+    stream: 'btcusdt@kline_15m',
+    data: {
+      e: 'kline',
+      E: 1792329820185,
+      s: 'BTCUSDT',
+      k: {
+        t: 1792329300000,
+        T: 1792330199999,
+        s: 'BTCUSDT',
+        i: '15m',
+        f: 8183115177,
+        L: 8183126008,
+        o: '81877.10',
+        c: '81810.20',
+        h: '81914.90',
+        l: '81805.90',
+        v: '462.679',
+        n: 10812,
+        x: false,
+        q: '37872361.70110',
+        V: '130.613',
+        Q: '10693536.80310',
+        B: '0',
+      },
     },
   },
 };
@@ -152,6 +183,28 @@ describe('parseBinanceMessage', () => {
     });
   });
 
+  it('봉(kline)을 봉 간격과 Candle로 바꾼다', () => {
+    expect(parse(samples.kline)).toEqual({
+      symbol: 'BTCUSDT',
+      kind: 'candle',
+      interval: '15m',
+      data: {
+        time: 1792329300000,
+        open: '81877.10',
+        high: '81914.90',
+        low: '81805.90',
+        close: '81810.20',
+        volume: '462.679',
+      },
+    });
+  });
+
+  it('다루지 않는 봉 간격이면 null', () => {
+    const threeMinutes = structuredClone(samples.kline);
+    threeMinutes.data.k.i = '3m';
+    expect(parse(threeMinutes)).toBeNull();
+  });
+
   it('다루지 않는 종목이면 null', () => {
     const doge = structuredClone(samples.aggTrade);
     doge.data.s = 'DOGEUSDT';
@@ -165,7 +218,7 @@ describe('parseBinanceMessage', () => {
   });
 
   it('모르는 이벤트, JSON이 아닌 메시지면 null', () => {
-    expect(parse({ stream: 'x', data: { e: 'kline' } })).toBeNull();
+    expect(parse({ stream: 'x', data: { e: 'bookTicker' } })).toBeNull();
     expect(parseBinanceMessage('not json')).toBeNull();
   });
 });
@@ -175,11 +228,76 @@ describe('buildStreamUrl', () => {
     expect(buildStreamUrl('wss://fstream.binance.com', 'market')).toBe(
       'wss://fstream.binance.com/market/stream?streams=' +
         'btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@ticker/' +
-        'ethusdt@aggTrade/ethusdt@markPrice@1s/ethusdt@ticker',
+        'btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/' +
+        'btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d/' +
+        'ethusdt@aggTrade/ethusdt@markPrice@1s/ethusdt@ticker/' +
+        'ethusdt@kline_1m/ethusdt@kline_5m/ethusdt@kline_15m/' +
+        'ethusdt@kline_1h/ethusdt@kline_4h/ethusdt@kline_1d',
     );
     expect(buildStreamUrl('wss://fstream.binance.com', 'public')).toBe(
       'wss://fstream.binance.com/public/stream?streams=' +
         'btcusdt@depth20@100ms/ethusdt@depth20@100ms',
     );
+  });
+});
+
+describe('parseBinanceKlines', () => {
+  const sample = [
+    [
+      1792328400000,
+      '81952.40',
+      '81952.50',
+      '81870.30',
+      '81877.10',
+      '413.252',
+      1792329299999,
+      '33848136.96150',
+      12791,
+      '182.930',
+      '14983637.77990',
+      '0',
+    ],
+    [
+      1792329300000,
+      '81877.10',
+      '81914.90',
+      '81805.90',
+      '81805.90',
+      '458.546',
+      1792330199999,
+      '37534255.78880',
+      10678,
+      '126.691',
+      '10372691.94860',
+      '0',
+    ],
+  ];
+
+  it('REST klines 배열을 오래된 것부터 Candle 목록으로 바꾼다', () => {
+    expect(parseBinanceKlines(sample)).toEqual([
+      {
+        time: 1792328400000,
+        open: '81952.40',
+        high: '81952.50',
+        low: '81870.30',
+        close: '81877.10',
+        volume: '413.252',
+      },
+      {
+        time: 1792329300000,
+        open: '81877.10',
+        high: '81914.90',
+        low: '81805.90',
+        close: '81805.90',
+        volume: '458.546',
+      },
+    ]);
+  });
+
+  it('모양이 다르면 null', () => {
+    expect(
+      parseBinanceKlines({ code: -1120, msg: 'Invalid interval.' }),
+    ).toBeNull();
+    expect(parseBinanceKlines([[1792328400000, 'NaN']])).toBeNull();
   });
 });

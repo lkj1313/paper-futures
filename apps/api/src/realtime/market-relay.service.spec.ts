@@ -13,6 +13,7 @@ describe('MarketRelayService', () => {
     sendMark: vi.fn(),
     sendDepth: vi.fn(),
     sendTicker: vi.fn(),
+    sendCandle: vi.fn(),
   };
   const relay = new MarketRelayService(
     {} as RedisService,
@@ -77,5 +78,24 @@ describe('MarketRelayService', () => {
     expect(gateway.sendDepth).toHaveBeenCalledWith(
       expect.objectContaining({ symbol: 'BTCUSDT', asks: [['83002', '1']] }),
     );
+  });
+
+  it('봉은 오는 대로 그 종목·간격으로 바로 보낸다', () => {
+    const candle = {
+      time: 1792329300000,
+      open: '83000',
+      high: '83500',
+      low: '82500',
+      close: '83200',
+      volume: '100',
+    };
+
+    relay.receiveCandle('BTCUSDT', '15m', JSON.stringify(candle));
+
+    expect(gateway.sendCandle).toHaveBeenCalledWith({
+      symbol: 'BTCUSDT',
+      interval: '15m',
+      candle,
+    });
   });
 });

@@ -20,6 +20,24 @@ export const RECENT_TRADES_LIMIT = 50;
 export const recentTradesKey = (symbol: MarketSymbol) =>
   `market:${symbol}:trades`;
 
+export const CANDLE_INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
+export type CandleInterval = (typeof CANDLE_INTERVALS)[number];
+
+export const isCandleInterval = (value: unknown): value is CandleInterval =>
+  typeof value === 'string' &&
+  (CANDLE_INTERVALS as readonly string[]).includes(value);
+
+export const candleKey = (symbol: MarketSymbol, interval: CandleInterval) =>
+  `market:${symbol}:candle:${interval}`;
+
+export const DEFAULT_CANDLE_LIMIT = 500;
+export const MAX_CANDLE_LIMIT = 1000;
+
+export interface CandlesQuery {
+  interval: CandleInterval;
+  limit?: number;
+}
+
 // 가격과 수량은 모두 Binance가 보내준 그대로 문자열이다.
 // time은 Binance 기준 시각, receivedAt은 우리가 받은 시각 (둘 다 ms).
 
@@ -65,6 +83,15 @@ export interface Ticker24h {
   quoteVolume: string;
   time: number;
   receivedAt: number;
+}
+
+export interface Candle {
+  time: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
 }
 
 /** 받은 지 이 시간이 지난 시세는 오래된(stale) 것으로 본다 */

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  candleKey,
   marketKey,
   RECENT_TRADES_LIMIT,
   recentTradesKey,
@@ -21,7 +22,10 @@ export class MarketDataWriterService {
       return false;
     }
 
-    const key = marketKey(event.symbol, event.kind);
+    const key =
+      event.kind === 'candle'
+        ? candleKey(event.symbol, event.interval)
+        : marketKey(event.symbol, event.kind);
     const payload = JSON.stringify(event.data);
     // 저장과 방송을 한 번의 왕복으로 보낸다
     const pipeline = this.redis

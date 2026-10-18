@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
+  type Candle,
+  type CandleInterval,
+  candleKey,
   isStale,
   type MarketDataKind,
   type MarketSymbol,
@@ -12,7 +15,9 @@ import {
   type Ticker24h,
 } from '@paper-futures/shared';
 import { AppException } from '../common/app.exception.js';
+import { parseBinanceKlines } from '../market-data/binance.parser.js';
 import { RedisService } from '../redis/redis.service.js';
+import { BinanceRestClient } from './binance-rest.client.js';
 import type { MarketSummaryDto, OrderBookDto } from './dto/market.dto.js';
 
 // Redis 값은 market-data 프로세스가 검증해서 넣은 JSON이다
@@ -22,7 +27,12 @@ const parse = <T>(value: string | null): T | undefined =>
 /** market-data 프로세스가 Redis에 넣어둔 시세를 읽는다 (api는 읽기만 한다) */
 @Injectable()
 export class MarketService {
-  constructor(private readonly redis: RedisService) {}
+  private readonly logger = new Logger(MarketService.name);
+
+  constructor(
+    private readonly redis: RedisService,
+    private readonly binance: BinanceRestClient,
+  ) {}
 
   async getSummaries(now = Date.now()): Promise<MarketSummaryDto[]> {
     // 종목별 체결, 마크가격, 24시간 통계 키를 MGET 한 번으로 가져온다
@@ -55,6 +65,37 @@ export class MarketService {
         stale: isStale(mark?.receivedAt, now),
       };
     });
+  }
+
+  async getCandles(
+    symbol: MarketSymbol,
+    interval: CandleInterval,
+    limit: number,
+  ): Promise<Candle[]> {
+    let raw: unknown;
+    try {
+      raw = await this.binance.getKlines(symbol, interval, limit);
+    } catch (error) {
+      this.logger.warn(
+        `캔들 요청 실패 ${symbol} ${interval}: ${String(error)}`,
+      );
+      throw new AppException('MARKET_DATA_UNAVAILABLE', {
+        message: '캔들을 가져오지 못했습니다. 잠시 후 다시 시도하세요.',
+      });
+    }
+
+    const candles = parseBinanceKlines(raw);
+    if (!candles) {
+      this.logger.warn(`캔들 응답 모양이 다름 ${symbol} ${interval}`);
+      throw new AppException('MARKET_DATA_UNAVAILABLE', {
+        message: '캔들을 가져오지 못했습니다. 잠시 후 다시 시도하세요.',
+      });
+    }
+    return candles;
+  }
+
+  async getCandle(symbol: MarketSymbol, interval: CandleInterval) {
+    return parse<Candle>(await this.redis.get(candleKey(symbol, interval)));
   }
 
   /** 한 종목의 최근 체결 목록(오래된 것부터), 마크가격, 호가, 24시간 통계를 읽는다. 받은 적 없으면 undefined */
