@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { type MarketSymbol, SYMBOLS } from '@paper-futures/shared';
+import {
+  type AccountOrder,
+  type CursorPage,
+  type MarketSymbol,
+  SYMBOLS,
+} from '@paper-futures/shared';
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional } from 'class-validator';
 import { ApiNextCursor, CursorPageQueryDto } from '../../common/cursor-page.js';
@@ -25,7 +30,7 @@ export class ListOrdersQueryDto extends CursorPageQueryDto {
   status?: OrderStatus;
 }
 
-export class OrderPageDto {
+export class OrderPageDto implements CursorPage<AccountOrder> {
   @ApiProperty({ type: [OrderDto] })
   items: OrderDto[];
 

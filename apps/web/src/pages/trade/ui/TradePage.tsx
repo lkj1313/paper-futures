@@ -4,6 +4,7 @@ import { useIsLoggedIn, useMe } from '@/entities/session';
 import { LogoutButton } from '@/features/auth';
 import { cn } from '@/shared/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { AccountTabs } from '@/widgets/account-tabs';
 import { MarketHeader } from '@/widgets/market-header';
 import { OrderBook } from '@/widgets/order-book';
 import { OrderPanel } from '@/widgets/order-panel';
@@ -70,28 +71,16 @@ export function TradePage() {
       <section className="row-span-2 min-h-0 overflow-hidden rounded-md bg-card">
         <OrderPanel symbol={symbol} />
       </section>
-      <Placeholder
-        label="포지션 · 대기 주문 · 주문 내역 · 원장"
-        className="col-span-2"
-      />
+      <section className="col-span-2 min-h-0 overflow-hidden rounded-md bg-card">
+        <AccountTabs />
+      </section>
     </div>
   );
 }
 
-function Placeholder({
-  label,
-  className,
-}: {
-  label: string;
-  className?: string;
-}) {
+function Placeholder({ label }: { label: string }) {
   return (
-    <section
-      className={cn(
-        'flex items-center justify-center rounded-md bg-card text-sm text-muted-foreground',
-        className,
-      )}
-    >
+    <section className="flex items-center justify-center rounded-md bg-card text-sm text-muted-foreground">
       {label}
     </section>
   );

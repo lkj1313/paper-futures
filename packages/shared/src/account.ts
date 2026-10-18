@@ -1,4 +1,5 @@
 import type {
+  LedgerEntryType,
   OrderSide,
   OrderStatus,
   OrderType,
@@ -46,4 +47,12 @@ export interface AccountWallet {
   usedMargin: string;
   openOrderMargin: string;
   availableBalance: string;
+}
+
+export interface AccountLedgerEntry {
+  id: string;
+  type: LedgerEntryType;
+  amount: string;
+  balanceAfter: string;
+  createdAt: string;
 }

@@ -5,6 +5,7 @@ export * from './trading.js';
 export * from './account.js';
 export * from './orders.js';
 export * from './leverage.js';
+export * from './page.js';
 export * from './auth.js';
 export * from './realtime.js';
 export * from './math/decimal.js';
@@ -12,6 +13,7 @@ export * from './math/rounding.js';
 export * from './math/margin.js';
 export * from './math/pnl.js';
 export * from './math/liquidation.js';
+export * from './math/position-live.js';
 export * from './math/fill.js';
 export * from './math/funding.js';
 
