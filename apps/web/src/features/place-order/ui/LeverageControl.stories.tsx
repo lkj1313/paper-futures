@@ -1,16 +1,36 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { type ComponentProps, useState } from 'react';
-import { LeverageControl } from './LeverageControl';
+import { useState } from 'react';
+import { LeverageControl, type LeverageControlProps } from './LeverageControl';
 
-function Playground(props: ComponentProps<typeof LeverageControl>) {
+function Playground(props: LeverageControlProps) {
   const [value, setValue] = useState(props.value);
-  return <LeverageControl {...props} value={value} onChange={setValue} />;
+  const [saving, setSaving] = useState(false);
+
+  const save = async (leverage: number) => {
+    setSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setValue(leverage);
+    setSaving(false);
+  };
+
+  return (
+    <LeverageControl
+      {...props}
+      value={value}
+      saving={props.saving || saving}
+      onConfirm={save}
+    />
+  );
 }
 
 const meta = {
   title: 'features/place-order/LeverageControl',
   component: LeverageControl,
-  args: { symbol: 'BTCUSDT', value: 10, onChange: () => undefined },
+  args: {
+    symbol: 'BTCUSDT',
+    value: 10,
+    onConfirm: async () => undefined,
+  },
   render: (args) => <Playground {...args} />,
 } satisfies Meta<typeof LeverageControl>;
 
@@ -18,7 +38,17 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  name: '기본 (눌러서 조절)',
+  name: '기본 (바꾸고 확인)',
+};
+
+export const Saving: Story = {
+  name: '저장 중',
+  args: { saving: true },
+};
+
+export const LoggedOut: Story = {
+  name: '로그인 전',
+  args: { disabledReason: '로그인하면 바꿀 수 있습니다' },
 };
 
 export const Locked: Story = {
