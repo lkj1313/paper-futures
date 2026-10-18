@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 import { RequestLoggerMiddleware } from './common/request-logger.middleware.js';
 import { AppConfigModule } from './config/app-config.module.js';
 import { HealthModule } from './health/health.module.js';
+import { LeverageModule } from './leverage/leverage.module.js';
 import { MarketModule } from './market/market.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { PositionsModule } from './positions/positions.module.js';
@@ -25,6 +26,7 @@ import { WalletModule } from './wallet/wallet.module.js';
     HealthModule,
     AuthModule,
     WalletModule,
+    LeverageModule,
     MarketModule,
     OrdersModule,
     PositionsModule,

@@ -16,6 +16,7 @@ import { AccountEventsService } from '../account-events/account-events.service.j
 import { AppException } from '../common/app.exception.js';
 import { cursorPageArgs, toCursorPage } from '../common/cursor-page.js';
 import { toDb } from '../common/db-decimal.js';
+import { LeverageService } from '../leverage/leverage.service.js';
 import { MarketService } from '../market/market.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { TradeService } from '../trading/trade.service.js';
@@ -42,6 +43,7 @@ export class OrdersService {
     private readonly wallet: WalletService,
     private readonly trade: TradeService,
     private readonly events: AccountEventsService,
+    private readonly leverage: LeverageService,
   ) {}
 
   /** 내 주문 내역을 최신순으로 limit개씩 */
@@ -100,11 +102,12 @@ export class OrdersService {
       price: Decimal | null;
     },
   ) {
-    const { symbol, side, reduceOnly, leverage } = dto;
+    const { symbol, side, reduceOnly } = dto;
 
     const result = await this.prisma.transaction(async (tx) => {
       // 지갑을 잠가서 같은 사용자의 주문을 한 줄로 세운다
       const wallet = await this.wallet.lockByUserId(tx, userId);
+      const leverage = await this.leverage.get(tx, userId, symbol);
 
       // 체결을 포지션에 반영하고, 주문과 원장을 남긴다
       const applied = await this.trade.applyFill(tx, wallet, {
@@ -192,7 +195,8 @@ export class OrdersService {
         reduceOnly,
       });
       // 포지션이 있으면 그 포지션의 레버리지로 체결된다
-      const leverage = position?.leverage ?? dto.leverage;
+      const leverage =
+        position?.leverage ?? (await this.leverage.get(tx, userId, symbol));
       if (!reducing) this.trade.assertCanOpen(symbol, notional, leverage);
 
       let reservedMargin = toDecimal(0);

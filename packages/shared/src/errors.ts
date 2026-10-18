@@ -38,6 +38,11 @@ export const ERRORS = {
     message: '주문 가격이 올바르지 않습니다.',
   },
   INVALID_LEVERAGE: { status: 400, message: '레버리지가 올바르지 않습니다.' },
+  LEVERAGE_LOCKED: {
+    status: 409,
+    message:
+      '포지션이 열려 있어 레버리지를 바꿀 수 없습니다. 포지션을 닫은 뒤 바꾸세요.',
+  },
   INSUFFICIENT_MARGIN: { status: 400, message: '주문 가능 금액이 부족합니다.' },
   INSUFFICIENT_LIQUIDITY: {
     status: 400,

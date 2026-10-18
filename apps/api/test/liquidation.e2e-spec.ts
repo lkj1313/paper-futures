@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
+import type { MarketSymbol } from '@paper-futures/shared';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { LiquidationService } from '../src/engine/liquidation.service.js';
@@ -9,6 +10,7 @@ import {
   markInfo,
   resetData,
   seedDepth,
+  setLeverage,
   signupAndLogin,
 } from './utils.js';
 
@@ -47,7 +49,7 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
 
   /** 10배로 포지션을 열고, 청산 대상 조회 결과와 같은 모양으로 돌려준다 */
   const open = async (side: 'BUY' | 'SELL') => {
-    expect((await order({ side, leverage: 10 })).status).toBe(201);
+    expect((await order({ side })).status).toBe(201);
     return prisma.position.findFirstOrThrow({
       select: { id: true, userId: true },
     });
@@ -224,8 +226,15 @@ describe('강제 청산 한 건 처리 (e2e)', () => {
 
   describe('checkSymbol: 종목 점검', () => {
     /** 새 사용자로 가입해서 포지션을 연다 (수량 0.1) */
-    const openAs = async (email: string, body: object) => {
+    const openAs = async (
+      email: string,
+      {
+        leverage,
+        ...body
+      }: { leverage: number; side: 'BUY' | 'SELL'; symbol?: MarketSymbol },
+    ) => {
       const t = await signupAndLogin(app, email);
+      await setLeverage(app, t, body.symbol ?? 'BTCUSDT', leverage);
       expect((await order(body, t)).status).toBe(201);
     };
     /** 남아 있는 포지션의 주인 이메일 */

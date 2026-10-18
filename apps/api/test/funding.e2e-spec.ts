@@ -44,7 +44,6 @@ describe('펀딩비 정산 (e2e)', () => {
         symbol: 'BTCUSDT',
         type: 'MARKET',
         qty: '0.1',
-        leverage: 10,
         ...body,
       });
     expect(res.status).toBe(201);

@@ -13,14 +13,15 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(uuid(7)) @db.Uuid
-  email        String     @unique
-  passwordHash String
-  wallet       Wallet?
-  orders       Order[]
-  positions    Position[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id               String            @id @default(uuid(7)) @db.Uuid
+  email            String            @unique
+  passwordHash     String
+  wallet           Wallet?
+  orders           Order[]
+  positions        Position[]
+  leverageSettings LeverageSetting[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 /// 사용자당 하나. 모의거래소라 USDT 한 종류만 다룬다
@@ -64,9 +65,9 @@ model LedgerEntry {
   fundingRound   FundingRound?   @relation(fields: [fundingRoundId], references: [id], onDelete: Restrict)
   createdAt      DateTime        @default(now())
 
-  @@index([walletId, createdAt])
   // 한 펀딩 회차에서 지갑 하나에는 한 줄만 (두 번 정산 방지)
   @@unique([fundingRoundId, walletId])
+  @@index([walletId, createdAt])
 }
 
 /// 펀딩비 정산 회차. 같은 종목, 같은 펀딩 시각은 한 번만 정산한다
@@ -168,4 +169,16 @@ model Position {
   @@unique([userId, symbol])
   // 마크가격이 바뀔 때 "이 종목 롱 중 청산가 ≥ 마크가격"을 바로 찾는다
   @@index([symbol, side, liquidationPrice])
+}
+
+model LeverageSetting {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  symbol    String
+  leverage  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, symbol])
 }

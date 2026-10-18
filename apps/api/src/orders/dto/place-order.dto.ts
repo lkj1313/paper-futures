@@ -1,22 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { type MarketSymbol, OrderSide, SYMBOLS } from '@paper-futures/shared';
+import {
+  type MarketSymbol,
+  OrderSide,
+  PLACEABLE_ORDER_TYPES,
+  type PlaceableOrderType,
+  type PlaceOrderRequest,
+  SYMBOLS,
+} from '@paper-futures/shared';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
-  IsInt,
   IsOptional,
   Matches,
-  Max,
-  Min,
   ValidateIf,
 } from 'class-validator';
 
-/** 사용자가 낼 수 있는 주문 유형 (청산은 시스템만) */
-export const PLACEABLE_ORDER_TYPES = ['MARKET', 'LIMIT'] as const;
-export type PlaceableOrderType = (typeof PLACEABLE_ORDER_TYPES)[number];
-
-export class PlaceOrderDto {
+export class PlaceOrderDto implements PlaceOrderRequest {
   @ApiProperty({ enum: SYMBOLS, example: 'BTCUSDT' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.toUpperCase() : value,
@@ -48,13 +48,6 @@ export class PlaceOrderDto {
     message: '지정가 주문은 price(숫자 문자열)가 필요합니다.',
   })
   price?: string;
-
-  /** 새 포지션을 열 때의 레버리지. 이미 포지션이 있으면 그 포지션의 레버리지를 쓴다 */
-  @IsOptional()
-  @IsInt({ message: '레버리지는 정수여야 합니다.' })
-  @Min(1, { message: '레버리지는 1 이상이어야 합니다.' })
-  @Max(125, { message: '레버리지는 125 이하여야 합니다.' })
-  leverage: number = 10;
 
   /**
    * 포지션을 줄이기만 하는 주문. 줄일 반대 방향 포지션이 없거나
