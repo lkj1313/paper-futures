@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { MarketHeader } from '@/widgets/market-header';
 import { OrderBook } from '@/widgets/order-book';
+import { OrderPanel } from '@/widgets/order-panel';
 import { RecentTrades } from '@/widgets/recent-trades';
 
 export function TradePage() {
@@ -66,7 +67,9 @@ export function TradePage() {
           </TabsContent>
         </Tabs>
       </section>
-      <Placeholder label="주문 · 지갑" className="row-span-2" />
+      <section className="row-span-2 min-h-0 overflow-hidden rounded-md bg-card">
+        <OrderPanel symbol={symbol} />
+      </section>
       <Placeholder
         label="포지션 · 대기 주문 · 주문 내역 · 원장"
         className="col-span-2"
