@@ -1,6 +1,6 @@
 import type { MarketSymbol, PlaceableOrderType } from '@paper-futures/shared';
 import { create } from 'zustand';
-import { toTickPrice } from '../lib/price';
+import { toTickPrice } from '@/shared/lib/price';
 
 interface OrderDraftState {
   type: PlaceableOrderType;
