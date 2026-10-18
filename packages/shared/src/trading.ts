@@ -22,3 +22,13 @@ export const OrderStatus = {
   EXPIRED: 'EXPIRED',
 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+
+export const LedgerEntryType = {
+  SIGNUP_BONUS: 'SIGNUP_BONUS',
+  TRADING_FEE: 'TRADING_FEE',
+  REALIZED_PNL: 'REALIZED_PNL',
+  LIQUIDATION: 'LIQUIDATION',
+  FUNDING_FEE: 'FUNDING_FEE',
+} as const;
+export type LedgerEntryType =
+  (typeof LedgerEntryType)[keyof typeof LedgerEntryType];
