@@ -1,6 +1,7 @@
 import type { MarketTrade } from '@paper-futures/shared';
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { RecentTradesView } from './RecentTradesView';
 
 const at = (h: number, m: number, s: number) =>
@@ -60,5 +61,29 @@ describe('RecentTradesView', () => {
 
     expect(rows()).toEqual([]);
     expect(screen.getByText('아직 체결이 없습니다')).toBeInTheDocument();
+  });
+
+  it('가격을 누를 수 있게 하면 체결 줄을 눌러 그 가격을 고른다', async () => {
+    const onPriceClick = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <RecentTradesView
+        symbol="BTCUSDT"
+        trades={TRADES}
+        onPriceClick={onPriceClick}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: '81,549.9에 지정가 주문' }),
+    );
+
+    expect(onPriceClick).toHaveBeenCalledExactlyOnceWith('81549.9');
+  });
+
+  it('가격을 누를 수 있게 하지 않으면 버튼이 없다', () => {
+    render(<RecentTradesView symbol="BTCUSDT" trades={TRADES} />);
+
+    expect(screen.queryAllByRole('button')).toEqual([]);
   });
 });

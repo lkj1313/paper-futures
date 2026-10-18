@@ -5,6 +5,7 @@ import type {
   PriceLevel,
 } from '@paper-futures/shared';
 import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeResizeObserver } from '@/test/resize-observer';
 import { OrderBookView, type OrderBookViewProps } from './OrderBookView';
@@ -172,5 +173,31 @@ describe('OrderBookView', () => {
     renderView();
 
     expect(screen.queryByTitle(STALE_TITLE)).not.toBeInTheDocument();
+  });
+
+  it('가격을 누를 수 있게 하면 줄과 현재가를 눌러 그 가격을 고른다', async () => {
+    const onPriceClick = vi.fn();
+    const user = userEvent.setup();
+    renderView({ onPriceClick });
+
+    await user.click(
+      screen.getByRole('button', { name: '81,565.9에 지정가 주문' }),
+    );
+    await user.click(
+      screen.getByRole('button', { name: '81,565.3에 지정가 주문' }),
+    );
+    await user.click(screen.getByLabelText('현재가'));
+
+    expect(onPriceClick.mock.calls).toEqual([
+      ['81565.9'],
+      ['81565.3'],
+      ['81565.4'],
+    ]);
+  });
+
+  it('가격을 누를 수 있게 하지 않으면 버튼이 없다', () => {
+    renderView();
+
+    expect(screen.queryAllByRole('button')).toEqual([]);
   });
 });

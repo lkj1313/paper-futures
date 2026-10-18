@@ -1,6 +1,8 @@
 import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useMarketStore } from '@/entities/market/model/market-store';
+import { useOrderDraft } from '@/features/place-order';
 import { subscribeMarket } from '@/shared/socket';
 import { OrderBook } from './OrderBook';
 
@@ -27,7 +29,7 @@ function receiveDepth(bestBid: string) {
 const bestBid = () =>
   within(screen.getByRole('list', { name: '매수 호가' })).getAllByRole(
     'listitem',
-  )[0].firstElementChild?.nextElementSibling?.textContent;
+  )[0].firstElementChild?.children[1]?.textContent;
 
 describe('OrderBook', () => {
   it('종목을 구독하고, 저장소의 호가를 그린다', () => {
@@ -60,5 +62,20 @@ describe('OrderBook', () => {
 
     act(() => vi.advanceTimersByTime(1));
     expect(bestBid()).toBe('2,426.14');
+  });
+
+  it('호가 줄을 누르면 주문폼이 그 가격의 지정가가 된다', async () => {
+    receiveDepth('2426.10');
+    useOrderDraft.getState().setType('MARKET');
+    render(<OrderBook symbol="ETHUSDT" />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: '2,426.10에 지정가 주문' }),
+    );
+
+    expect(useOrderDraft.getState()).toMatchObject({
+      type: 'LIMIT',
+      price: '2426.10',
+    });
   });
 });

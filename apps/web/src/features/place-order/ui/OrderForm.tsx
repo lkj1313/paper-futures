@@ -1,11 +1,9 @@
 import {
   type AccountOrder,
-  MARKET_SPECS,
   type MarketSymbol,
   type OrderSide,
   type PlaceableOrderType,
   type PlaceOrderRequest,
-  toDecimal,
 } from '@paper-futures/shared';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -18,16 +16,12 @@ import { formatPrice, formatQty } from '@/shared/lib/format';
 import { usePlaceOrder } from '../api/use-place-order';
 import { checkOrder, qtyByPercent } from '../lib/order-math';
 import { buildOrderSummary } from '../lib/order-summary';
+import { toTickPrice } from '../lib/price';
 import { useOrderDraft } from '../model/order-draft-store';
 import { LeverageSetting } from './LeverageSetting';
 import { OrderFormView } from './OrderFormView';
 
 const SIDE_LABEL = { BUY: '매수', SELL: '매도' } as const;
-
-const toTick = (symbol: MarketSymbol, price: string) =>
-  toDecimal(price).toFixed(
-    MARKET_SPECS[symbol].tickSize.split('.')[1]?.length ?? 0,
-  );
 
 function placedMessage(symbol: MarketSymbol, order: AccountOrder) {
   const side = SIDE_LABEL[order.side];
@@ -68,7 +62,7 @@ export function OrderForm({ symbol }: { symbol: MarketSymbol }) {
     prefilledFor.current = symbol;
     const draft = useOrderDraft.getState();
     if (draft.type === 'LIMIT' && draft.price === '') {
-      setPrice(toTick(symbol, lastPrice));
+      setPrice(toTickPrice(symbol, lastPrice));
     }
   }, [symbol, lastPrice, setPrice]);
 
@@ -88,7 +82,7 @@ export function OrderForm({ symbol }: { symbol: MarketSymbol }) {
   const changeType = (next: PlaceableOrderType) => {
     setType(next);
     if (next === 'LIMIT' && price === '' && lastPrice) {
-      setPrice(toTick(symbol, lastPrice));
+      setPrice(toTickPrice(symbol, lastPrice));
     }
   };
 

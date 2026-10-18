@@ -28,4 +28,20 @@ describe('useOrderDraft', () => {
       reduceOnly: false,
     });
   });
+
+  it('가격을 고르면 지정가로 바꾸고 가격을 호가 단위에 맞춘다 (수량은 그대로)', () => {
+    draft().setType('MARKET');
+    draft().setQty('0.010');
+
+    draft().pickPrice('BTCUSDT', '81565.40');
+
+    expect(draft()).toMatchObject({
+      type: 'LIMIT',
+      price: '81565.4',
+      qty: '0.010',
+    });
+
+    draft().pickPrice('ETHUSDT', '2426.5');
+    expect(draft().price).toBe('2426.50');
+  });
 });
