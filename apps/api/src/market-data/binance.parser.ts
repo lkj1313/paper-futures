@@ -185,6 +185,26 @@ export function parseBinanceMessage(
   }
 }
 
+const restKlines = z.array(
+  z.tuple(
+    [z.number(), decimal, decimal, decimal, decimal, decimal],
+    z.unknown(),
+  ),
+);
+
+export function parseBinanceKlines(raw: unknown): Candle[] | null {
+  const parsed = restKlines.safeParse(raw);
+  if (!parsed.success) return null;
+  return parsed.data.map(([time, open, high, low, close, volume]) => ({
+    time,
+    open,
+    high,
+    low,
+    close,
+    volume,
+  }));
+}
+
 /** 경로(/public, /market)별로 어떤 스트림을 구독할지 */
 export const STREAMS_BY_ROUTE: Record<
   'public' | 'market',

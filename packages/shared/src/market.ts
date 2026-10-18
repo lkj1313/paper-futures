@@ -30,6 +30,14 @@ export const isCandleInterval = (value: unknown): value is CandleInterval =>
 export const candleKey = (symbol: MarketSymbol, interval: CandleInterval) =>
   `market:${symbol}:candle:${interval}`;
 
+export const DEFAULT_CANDLE_LIMIT = 500;
+export const MAX_CANDLE_LIMIT = 1000;
+
+export interface CandlesQuery {
+  interval: CandleInterval;
+  limit?: number;
+}
+
 // 가격과 수량은 모두 Binance가 보내준 그대로 문자열이다.
 // time은 Binance 기준 시각, receivedAt은 우리가 받은 시각 (둘 다 ms).
 

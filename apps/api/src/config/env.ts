@@ -15,6 +15,7 @@ const envSchema = z.object({
     .default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
   BINANCE_FUTURES_WS_URL: z.url().default('wss://fstream.binance.com'),
+  BINANCE_FUTURES_REST_URL: z.url().default('https://fapi.binance.com'),
 });
 
 export type Env = z.infer<typeof envSchema>;

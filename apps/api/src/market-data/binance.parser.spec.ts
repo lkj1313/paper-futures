@@ -1,4 +1,8 @@
-import { buildStreamUrl, parseBinanceMessage } from './binance.parser.js';
+import {
+  buildStreamUrl,
+  parseBinanceKlines,
+  parseBinanceMessage,
+} from './binance.parser.js';
 
 // 실제 Binance 선물 WebSocket에서 받은 메시지 (필드 일부 생략)
 const samples = {
@@ -234,5 +238,66 @@ describe('buildStreamUrl', () => {
       'wss://fstream.binance.com/public/stream?streams=' +
         'btcusdt@depth20@100ms/ethusdt@depth20@100ms',
     );
+  });
+});
+
+describe('parseBinanceKlines', () => {
+  const sample = [
+    [
+      1792328400000,
+      '81952.40',
+      '81952.50',
+      '81870.30',
+      '81877.10',
+      '413.252',
+      1792329299999,
+      '33848136.96150',
+      12791,
+      '182.930',
+      '14983637.77990',
+      '0',
+    ],
+    [
+      1792329300000,
+      '81877.10',
+      '81914.90',
+      '81805.90',
+      '81805.90',
+      '458.546',
+      1792330199999,
+      '37534255.78880',
+      10678,
+      '126.691',
+      '10372691.94860',
+      '0',
+    ],
+  ];
+
+  it('REST klines 배열을 오래된 것부터 Candle 목록으로 바꾼다', () => {
+    expect(parseBinanceKlines(sample)).toEqual([
+      {
+        time: 1792328400000,
+        open: '81952.40',
+        high: '81952.50',
+        low: '81870.30',
+        close: '81877.10',
+        volume: '413.252',
+      },
+      {
+        time: 1792329300000,
+        open: '81877.10',
+        high: '81914.90',
+        low: '81805.90',
+        close: '81805.90',
+        volume: '458.546',
+      },
+    ]);
+  });
+
+  it('모양이 다르면 null', () => {
+    expect(
+      parseBinanceKlines({ code: -1120, msg: 'Invalid interval.' }),
+    ).toBeNull();
+    expect(parseBinanceKlines([[1792328400000, 'NaN']])).toBeNull();
   });
 });
