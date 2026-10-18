@@ -75,6 +75,33 @@ const samples = {
       n: 3000001,
     },
   },
+  kline: {
+    stream: 'btcusdt@kline_15m',
+    data: {
+      e: 'kline',
+      E: 1792329820185,
+      s: 'BTCUSDT',
+      k: {
+        t: 1792329300000,
+        T: 1792330199999,
+        s: 'BTCUSDT',
+        i: '15m',
+        f: 8183115177,
+        L: 8183126008,
+        o: '81877.10',
+        c: '81810.20',
+        h: '81914.90',
+        l: '81805.90',
+        v: '462.679',
+        n: 10812,
+        x: false,
+        q: '37872361.70110',
+        V: '130.613',
+        Q: '10693536.80310',
+        B: '0',
+      },
+    },
+  },
 };
 
 const parse = (message: unknown) =>
@@ -152,6 +179,28 @@ describe('parseBinanceMessage', () => {
     });
   });
 
+  it('봉(kline)을 봉 간격과 Candle로 바꾼다', () => {
+    expect(parse(samples.kline)).toEqual({
+      symbol: 'BTCUSDT',
+      kind: 'candle',
+      interval: '15m',
+      data: {
+        time: 1792329300000,
+        open: '81877.10',
+        high: '81914.90',
+        low: '81805.90',
+        close: '81810.20',
+        volume: '462.679',
+      },
+    });
+  });
+
+  it('다루지 않는 봉 간격이면 null', () => {
+    const threeMinutes = structuredClone(samples.kline);
+    threeMinutes.data.k.i = '3m';
+    expect(parse(threeMinutes)).toBeNull();
+  });
+
   it('다루지 않는 종목이면 null', () => {
     const doge = structuredClone(samples.aggTrade);
     doge.data.s = 'DOGEUSDT';
@@ -165,7 +214,7 @@ describe('parseBinanceMessage', () => {
   });
 
   it('모르는 이벤트, JSON이 아닌 메시지면 null', () => {
-    expect(parse({ stream: 'x', data: { e: 'kline' } })).toBeNull();
+    expect(parse({ stream: 'x', data: { e: 'bookTicker' } })).toBeNull();
     expect(parseBinanceMessage('not json')).toBeNull();
   });
 });
@@ -175,7 +224,11 @@ describe('buildStreamUrl', () => {
     expect(buildStreamUrl('wss://fstream.binance.com', 'market')).toBe(
       'wss://fstream.binance.com/market/stream?streams=' +
         'btcusdt@aggTrade/btcusdt@markPrice@1s/btcusdt@ticker/' +
-        'ethusdt@aggTrade/ethusdt@markPrice@1s/ethusdt@ticker',
+        'btcusdt@kline_1m/btcusdt@kline_5m/btcusdt@kline_15m/' +
+        'btcusdt@kline_1h/btcusdt@kline_4h/btcusdt@kline_1d/' +
+        'ethusdt@aggTrade/ethusdt@markPrice@1s/ethusdt@ticker/' +
+        'ethusdt@kline_1m/ethusdt@kline_5m/ethusdt@kline_15m/' +
+        'ethusdt@kline_1h/ethusdt@kline_4h/ethusdt@kline_1d',
     );
     expect(buildStreamUrl('wss://fstream.binance.com', 'public')).toBe(
       'wss://fstream.binance.com/public/stream?streams=' +

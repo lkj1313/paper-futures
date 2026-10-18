@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import {
+  candleKey,
   marketKey,
   RECENT_TRADES_LIMIT,
   recentTradesKey,
@@ -127,6 +128,49 @@ describe('MarketDataWriterService (e2e)', () => {
     expect(
       JSON.parse((await redis.get(marketKey('ETHUSDT', 'ticker')))!),
     ).toMatchObject({ lastPrice: '3108.00', priceChangePercent: '-0.400' });
+  });
+
+  it('봉은 market:{종목}:candle:{간격}에 저장하고 같은 이름의 채널로 방송한다', async () => {
+    const subscriber = new Redis(redis.options);
+    const received = new Promise<string>((resolve) =>
+      subscriber.on('message', (_channel, message) => resolve(message)),
+    );
+    await subscriber.subscribe(redis.channel(candleKey('ETHUSDT', '1h')));
+
+    await writer.handleMessage(
+      JSON.stringify({
+        stream: 'ethusdt@kline_1h',
+        data: {
+          e: 'kline',
+          E: 1792329820185,
+          s: 'ETHUSDT',
+          k: {
+            t: 1792328400000,
+            i: '1h',
+            o: '2410.00',
+            c: '2419.50',
+            h: '2425.10',
+            l: '2405.30',
+            v: '18230.512',
+            x: false,
+          },
+        },
+      }),
+    );
+
+    const candle = {
+      time: 1792328400000,
+      open: '2410.00',
+      high: '2425.10',
+      low: '2405.30',
+      close: '2419.50',
+      volume: '18230.512',
+    };
+    expect(JSON.parse((await redis.get(candleKey('ETHUSDT', '1h')))!)).toEqual(
+      candle,
+    );
+    expect(JSON.parse(await received)).toEqual(candle);
+    await subscriber.quit();
   });
 
   it('처리할 수 없는 메시지는 저장하지 않는다', async () => {

@@ -1,4 +1,7 @@
 import {
+  type Candle,
+  CANDLE_INTERVALS,
+  type CandleInterval,
   type MarketSymbol,
   type MarketTrade,
   type MarkPriceInfo,
@@ -58,6 +61,20 @@ const ticker = z.object({
   q: decimal,
 });
 
+const kline = z.object({
+  e: z.literal('kline'),
+  s: symbol,
+  k: z.object({
+    t: z.number(),
+    i: z.enum(CANDLE_INTERVALS),
+    o: decimal,
+    h: decimal,
+    l: decimal,
+    c: decimal,
+    v: decimal,
+  }),
+});
+
 // 여러 스트림을 한 연결로 받으면 { stream, data } 형태로 감싸서 온다
 const combinedMessage = z.object({
   stream: z.string(),
@@ -66,6 +83,7 @@ const combinedMessage = z.object({
     markPriceUpdate,
     depthUpdate,
     ticker,
+    kline,
   ]),
 });
 
@@ -73,7 +91,13 @@ export type MarketEvent =
   | { symbol: MarketSymbol; kind: 'trade'; data: MarketTrade }
   | { symbol: MarketSymbol; kind: 'mark'; data: MarkPriceInfo }
   | { symbol: MarketSymbol; kind: 'depth'; data: OrderBookDepth }
-  | { symbol: MarketSymbol; kind: 'ticker'; data: Ticker24h };
+  | { symbol: MarketSymbol; kind: 'ticker'; data: Ticker24h }
+  | {
+      symbol: MarketSymbol;
+      kind: 'candle';
+      interval: CandleInterval;
+      data: Candle;
+    };
 
 /**
  * Binance 메시지를 검증하고 알아보기 쉬운 이름으로 바꾼다.
@@ -144,6 +168,20 @@ export function parseBinanceMessage(
           receivedAt,
         },
       };
+    case 'kline':
+      return {
+        symbol: data.s,
+        kind: 'candle',
+        interval: data.k.i,
+        data: {
+          time: data.k.t,
+          open: data.k.o,
+          high: data.k.h,
+          low: data.k.l,
+          close: data.k.c,
+          volume: data.k.v,
+        },
+      };
   }
 }
 
@@ -155,7 +193,12 @@ export const STREAMS_BY_ROUTE: Record<
   // 고빈도 데이터: 상위 20단계 호가 (100ms마다)
   public: (s) => [`${s}@depth20@100ms`],
   // 일반 데이터: 체결, 마크가격 (1초마다)
-  market: (s) => [`${s}@aggTrade`, `${s}@markPrice@1s`, `${s}@ticker`],
+  market: (s) => [
+    `${s}@aggTrade`,
+    `${s}@markPrice@1s`,
+    `${s}@ticker`,
+    ...CANDLE_INTERVALS.map((interval) => `${s}@kline_${interval}`),
+  ],
 };
 
 export function buildStreamUrl(
