@@ -21,6 +21,5 @@ export function useCandles(symbol: MarketSymbol, interval: CandleInterval) {
           params: { interval } satisfies CandlesQuery,
         })
         .then((res) => res.data),
-    staleTime: Infinity,
   });
 }
