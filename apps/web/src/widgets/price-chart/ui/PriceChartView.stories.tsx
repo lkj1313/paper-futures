@@ -51,8 +51,9 @@ export const Btc: Story = {
 };
 
 export const WithPriceLines: Story = {
-  name: '내 포지션과 대기 주문 가격선',
+  name: '내 포지션과 대기 주문 가격선 (주문 선 끌기)',
   args: {
+    onOrderPriceChange: async () => undefined,
     priceLines: priceLinesOf(
       'BTCUSDT',
       {

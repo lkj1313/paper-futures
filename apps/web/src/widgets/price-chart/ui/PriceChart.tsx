@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useCandles, useCandleSubscription } from '@/entities/market';
 import { useOpenOrders } from '@/entities/order';
 import { usePosition } from '@/entities/position';
+import { useAmendOrder } from '@/features/amend-order';
 import { priceLinesOf } from '../lib/price-lines';
 import { IntervalPicker } from './IntervalPicker';
 import { PriceChartView } from './PriceChartView';
@@ -16,6 +17,7 @@ export function PriceChart({ symbol }: { symbol: MarketSymbol }) {
   const { data: candles, isError } = useCandles(symbol, interval);
   const position = usePosition(symbol);
   const { data: openOrders } = useOpenOrders();
+  const amend = useAmendOrder();
   const priceLines = useMemo(
     () => priceLinesOf(symbol, position, openOrders),
     [symbol, position, openOrders],
@@ -32,6 +34,9 @@ export function PriceChart({ symbol }: { symbol: MarketSymbol }) {
           candles={candles}
           failed={isError}
           priceLines={priceLines}
+          onOrderPriceChange={(id, price) =>
+            amend.mutateAsync({ id, symbol, price })
+          }
         />
       </div>
     </div>
