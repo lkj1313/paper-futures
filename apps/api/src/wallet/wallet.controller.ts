@@ -1,5 +1,14 @@
-import { Controller, Get, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
@@ -9,6 +18,7 @@ import {
 import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { ErrorResponseDto } from '../common/error-response.dto.js';
+import { DepositDto } from './dto/deposit.dto.js';
 import {
   LedgerEntryDto,
   LedgerPageDto,
@@ -32,6 +42,26 @@ export class WalletController {
   @ApiOkResponse({ type: WalletResponseDto })
   async getWallet(@CurrentUser() user: AuthUser): Promise<WalletResponseDto> {
     return WalletResponseDto.from(await this.walletService.getSummary(user.id));
+  }
+
+  @Post('deposit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '모의 USDT 충전',
+    description: '원장에 충전(DEPOSIT) 한 줄을 남기고 잔고를 늘린다.',
+  })
+  @ApiOkResponse({ type: WalletResponseDto })
+  @ApiBadRequestResponse({
+    description: '금액이 잘못됨 (VALIDATION_ERROR, INVALID_DEPOSIT_AMOUNT)',
+    type: ErrorResponseDto,
+  })
+  async deposit(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: DepositDto,
+  ): Promise<WalletResponseDto> {
+    return WalletResponseDto.from(
+      await this.walletService.deposit(user.id, dto.amount),
+    );
   }
 
   @Get('ledger')

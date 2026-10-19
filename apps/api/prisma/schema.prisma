@@ -44,6 +44,7 @@ enum LedgerEntryType {
   LIQUIDATION
   /// 펀딩비 (받으면 +, 내면 −)
   FUNDING_FEE
+  DEPOSIT
 }
 
 /// 원장: 잔고가 바뀔 때마다 한 줄씩 추가만 하고, 수정이나 삭제는 하지 않는다

@@ -115,6 +115,61 @@ describe('지갑 (e2e)', () => {
     expect(res.body.code).toBe('VALIDATION_ERROR');
   });
 
+  describe('POST /api/wallet/deposit', () => {
+    const deposit = (body: object, token?: string) => {
+      const req = request(app.getHttpServer())
+        .post('/api/wallet/deposit')
+        .send(body);
+      return token ? req.set('Authorization', `Bearer ${token}`) : req;
+    };
+
+    it('충전하면 잔고와 주문 가능 금액이 늘고, 원장에 충전 한 줄이 생긴다', async () => {
+      const token = await signupAndLogin(app);
+
+      const res = await deposit({ amount: '5000.5' }, token);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        asset: 'USDT',
+        balance: '15000.5',
+        usedMargin: '0',
+        openOrderMargin: '0',
+        availableBalance: '15000.5',
+      });
+      const ledger = await get('/api/wallet/ledger', token);
+      expect(ledger.body.items[0]).toMatchObject({
+        type: 'DEPOSIT',
+        amount: '5000.5',
+        balanceAfter: '15000.5',
+      });
+    });
+
+    it('금액이 0 이하, 100,000 초과, 소수 셋째 자리 이상, 숫자가 아니면 400 INVALID_DEPOSIT_AMOUNT', async () => {
+      const token = await signupAndLogin(app);
+
+      for (const amount of ['0', '100000.01', '1.234', 'abc', '-5']) {
+        const res = await deposit({ amount }, token);
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('INVALID_DEPOSIT_AMOUNT');
+      }
+      expect((await get('/api/wallet', token)).body.balance).toBe('10000');
+    });
+
+    it('금액이 없거나 문자열이 아니면 400 VALIDATION_ERROR', async () => {
+      const token = await signupAndLogin(app);
+
+      for (const body of [{}, { amount: 100 }]) {
+        const res = await deposit(body, token);
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('VALIDATION_ERROR');
+      }
+    });
+
+    it('토큰 없이 충전하면 401', async () => {
+      expect((await deposit({ amount: '100' })).status).toBe(401);
+    });
+  });
+
   it('DB 제약: 잔고를 음수로 만들 수 없다', async () => {
     await signupAndLogin(app);
     const wallet = await prisma.wallet.findFirstOrThrow();
