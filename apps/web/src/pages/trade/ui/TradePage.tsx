@@ -8,6 +8,7 @@ import { AccountTabs } from '@/widgets/account-tabs';
 import { MarketHeader } from '@/widgets/market-header';
 import { OrderBook } from '@/widgets/order-book';
 import { OrderPanel } from '@/widgets/order-panel';
+import { PriceChart } from '@/widgets/price-chart';
 import { RecentTrades } from '@/widgets/recent-trades';
 
 export function TradePage() {
@@ -53,7 +54,9 @@ export function TradePage() {
           )}
         </div>
       </header>
-      <Placeholder label="차트" />
+      <section className="min-h-0 overflow-hidden rounded-md bg-card">
+        <PriceChart symbol={symbol} />
+      </section>
       <section className="min-h-0 overflow-hidden rounded-md bg-card">
         <Tabs defaultValue="book" className="h-full gap-0">
           <TabsList variant="line" className="shrink-0 px-2 pt-2">
@@ -75,13 +78,5 @@ export function TradePage() {
         <AccountTabs />
       </section>
     </div>
-  );
-}
-
-function Placeholder({ label }: { label: string }) {
-  return (
-    <section className="flex items-center justify-center rounded-md bg-card text-sm text-muted-foreground">
-      {label}
-    </section>
   );
 }

@@ -7,5 +7,10 @@ export const socket: RealtimeSocket = io({
   autoConnect: false,
 });
 
-export const { subscribeMarket, unsubscribeMarket } = createRealtime(socket);
+export const {
+  subscribeMarket,
+  unsubscribeMarket,
+  subscribeCandles,
+  unsubscribeCandles,
+} = createRealtime(socket);
 export type { RealtimeSocket } from './realtime';
