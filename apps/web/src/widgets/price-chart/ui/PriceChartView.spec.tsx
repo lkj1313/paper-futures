@@ -11,6 +11,8 @@ const fake = vi.hoisted(() => {
     update: vi.fn(),
     applyOptions: vi.fn(),
     priceScale: () => ({ applyOptions: vi.fn() }),
+    createPriceLine: vi.fn((options: { title: string }) => options.title),
+    removePriceLine: vi.fn(),
   });
   const bars = series();
   const volume = series();
@@ -99,6 +101,60 @@ describe('PriceChartView', () => {
 
     rerender(<PriceChartView symbol="BTCUSDT" candles={undefined} failed />);
     expect(screen.getByText('캔들을 불러오지 못했습니다')).toBeInTheDocument();
+  });
+
+  it('가격선을 그리고, 목록이 바뀌면 옛 선을 지우고 새로 그린다', () => {
+    const candles = [candle(60_000, '83100')];
+    const entry = { price: 81000, title: '진입 롱' };
+    const liquidation = { price: 73300, title: '청산' };
+    const { rerender } = render(
+      <PriceChartView
+        symbol="BTCUSDT"
+        candles={candles}
+        priceLines={[entry, liquidation]}
+      />,
+    );
+    expect(fake.bars.createPriceLine.mock.calls).toEqual([
+      [entry],
+      [liquidation],
+    ]);
+
+    const order = { price: 70000, title: '매수 0.002' };
+    rerender(
+      <PriceChartView
+        symbol="BTCUSDT"
+        candles={candles}
+        priceLines={[order]}
+      />,
+    );
+
+    expect(fake.bars.removePriceLine.mock.calls).toEqual([
+      ['진입 롱'],
+      ['청산'],
+    ]);
+    expect(fake.bars.createPriceLine).toHaveBeenLastCalledWith(order);
+  });
+
+  it('가격선 목록이 그대로면 캔들이 바뀌어도 선을 다시 그리지 않는다', () => {
+    const lines = [{ price: 81000, title: '진입 롱' }];
+    const { rerender } = render(
+      <PriceChartView
+        symbol="BTCUSDT"
+        candles={[candle(60_000, '83100')]}
+        priceLines={lines}
+      />,
+    );
+
+    rerender(
+      <PriceChartView
+        symbol="BTCUSDT"
+        candles={[candle(60_000, '83200')]}
+        priceLines={lines}
+      />,
+    );
+
+    expect(fake.bars.createPriceLine).toHaveBeenCalledOnce();
+    expect(fake.bars.removePriceLine).not.toHaveBeenCalled();
   });
 
   it('화면에서 사라지면 차트를 지운다', () => {

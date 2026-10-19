@@ -1,6 +1,9 @@
 import type { CandleInterval, MarketSymbol } from '@paper-futures/shared';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useCandles, useCandleSubscription } from '@/entities/market';
+import { useOpenOrders } from '@/entities/order';
+import { usePosition } from '@/entities/position';
+import { priceLinesOf } from '../lib/price-lines';
 import { IntervalPicker } from './IntervalPicker';
 import { PriceChartView } from './PriceChartView';
 
@@ -11,6 +14,12 @@ export function PriceChart({ symbol }: { symbol: MarketSymbol }) {
     useState<CandleInterval>(DEFAULT_INTERVAL);
   useCandleSubscription(symbol, interval);
   const { data: candles, isError } = useCandles(symbol, interval);
+  const position = usePosition(symbol);
+  const { data: openOrders } = useOpenOrders();
+  const priceLines = useMemo(
+    () => priceLinesOf(symbol, position, openOrders),
+    [symbol, position, openOrders],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -18,7 +27,12 @@ export function PriceChart({ symbol }: { symbol: MarketSymbol }) {
         <IntervalPicker value={interval} onChange={setCandleInterval} />
       </div>
       <div className="min-h-0 flex-1">
-        <PriceChartView symbol={symbol} candles={candles} failed={isError} />
+        <PriceChartView
+          symbol={symbol}
+          candles={candles}
+          failed={isError}
+          priceLines={priceLines}
+        />
       </div>
     </div>
   );

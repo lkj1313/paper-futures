@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useTokenStore } from '@/shared/api/token-store';
 import { subscribeCandles, unsubscribeCandles } from '@/shared/socket';
 import { renderWithProviders } from '@/test/render';
 import { server } from '@/test/server';
@@ -17,14 +18,19 @@ vi.mock('./PriceChartView', () => ({
     symbol,
     candles,
     failed,
+    priceLines,
   }: {
     symbol: string;
     candles?: unknown[];
     failed?: boolean;
+    priceLines?: { title: string }[];
   }) => (
-    <p>
-      {symbol} {failed ? '실패' : `봉 ${candles?.length ?? '없음'}`}
-    </p>
+    <>
+      <p>
+        {symbol} {failed ? '실패' : `봉 ${candles?.length ?? '없음'}`}
+      </p>
+      <p>가격선: {priceLines?.map((line) => line.title).join(', ')}</p>
+    </>
   ),
 }));
 
@@ -100,6 +106,55 @@ describe('PriceChart', () => {
     await userEvent.click(screen.getByRole('button', { name: '15분' }));
 
     await waitFor(() => expect(requested).toEqual(['15m', '1h', '15m']));
+  });
+
+  it('로그인하면 내 포지션과 이 종목 대기 주문을 가격선으로 넘긴다', async () => {
+    server.use(
+      http.get('/api/positions', () =>
+        HttpResponse.json([
+          {
+            symbol: 'BTCUSDT',
+            side: 'LONG',
+            qty: '0.01',
+            entryPrice: '81000',
+            leverage: 10,
+            isolatedMargin: '81',
+            liquidationPrice: '73300',
+          },
+        ]),
+      ),
+      http.get('/api/orders', () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: 'order-1',
+              symbol: 'BTCUSDT',
+              side: 'BUY',
+              type: 'LIMIT',
+              status: 'NEW',
+              qty: '0.002',
+              price: '70000',
+              leverage: 10,
+              reduceOnly: false,
+              reservedMargin: '14.028',
+              avgFillPrice: null,
+              fee: '0',
+              realizedPnl: '0',
+              createdAt: '2026-10-18T00:00:00.000Z',
+              updatedAt: '2026-10-18T00:00:00.000Z',
+            },
+          ],
+          nextCursor: null,
+        }),
+      ),
+    );
+    useTokenStore.getState().setAccessToken('token-1');
+
+    renderWithProviders(<PriceChart symbol="BTCUSDT" />);
+
+    expect(
+      await screen.findByText('가격선: 진입 롱, 청산, 매수 0.002'),
+    ).toBeInTheDocument();
   });
 
   it('캔들을 받지 못하면 실패를 알린다', async () => {

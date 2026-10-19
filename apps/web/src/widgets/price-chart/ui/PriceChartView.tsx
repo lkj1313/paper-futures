@@ -2,6 +2,7 @@ import type { Candle, MarketSymbol } from '@paper-futures/shared';
 import {
   CandlestickSeries,
   ColorType,
+  type CreatePriceLineOptions,
   createChart,
   CrosshairMode,
   HistogramSeries,
@@ -21,6 +22,7 @@ import {
 } from '../lib/chart-data';
 
 const NO_CANDLES: Candle[] = [];
+const NO_LINES: CreatePriceLineOptions[] = [];
 const TEXT_COLOR = '#a1a1aa';
 const GRID_COLOR = 'rgba(255, 255, 255, 0.04)';
 const BORDER_COLOR = 'rgba(255, 255, 255, 0.1)';
@@ -35,12 +37,14 @@ export interface PriceChartViewProps {
   symbol: MarketSymbol;
   candles: Candle[] | undefined;
   failed?: boolean;
+  priceLines?: CreatePriceLineOptions[];
 }
 
 export function PriceChartView({
   symbol,
   candles,
   failed = false,
+  priceLines = NO_LINES,
 }: PriceChartViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const partsRef = useRef<ChartParts | null>(null);
@@ -111,6 +115,18 @@ export function PriceChartView({
     }
     drawnRef.current = next;
   }, [candles]);
+
+  useEffect(() => {
+    const parts = partsRef.current;
+    if (!parts) return;
+    const created = priceLines.map((options) =>
+      parts.bars.createPriceLine(options),
+    );
+    return () => {
+      if (partsRef.current !== parts) return;
+      for (const line of created) parts.bars.removePriceLine(line);
+    };
+  }, [priceLines]);
 
   return (
     <div className="relative h-full min-h-0">

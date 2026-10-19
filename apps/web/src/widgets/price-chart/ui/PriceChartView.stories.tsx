@@ -1,5 +1,6 @@
 import type { Candle } from '@paper-futures/shared';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { priceLinesOf } from '../lib/price-lines';
 import { PriceChartView } from './PriceChartView';
 
 function randomWalk(start: number, step: number, count: number): Candle[] {
@@ -47,6 +48,43 @@ type Story = StoryObj<typeof meta>;
 
 export const Btc: Story = {
   name: 'BTC 15분봉',
+};
+
+export const WithPriceLines: Story = {
+  name: '내 포지션과 대기 주문 가격선',
+  args: {
+    priceLines: priceLinesOf(
+      'BTCUSDT',
+      {
+        symbol: 'BTCUSDT',
+        side: 'LONG',
+        qty: '0.01',
+        entryPrice: '83400',
+        leverage: 10,
+        isolatedMargin: '83.4',
+        liquidationPrice: '83020',
+      },
+      [
+        {
+          id: 'order-1',
+          symbol: 'BTCUSDT',
+          side: 'SELL',
+          type: 'LIMIT',
+          status: 'NEW',
+          qty: '0.01',
+          price: '84200',
+          leverage: 10,
+          reduceOnly: true,
+          reservedMargin: '0',
+          avgFillPrice: null,
+          fee: '0',
+          realizedPnl: '0',
+          createdAt: '2026-10-19T00:00:00.000Z',
+          updatedAt: '2026-10-19T00:00:00.000Z',
+        },
+      ],
+    ),
+  },
 };
 
 export const Eth: Story = {
