@@ -18,3 +18,7 @@ export interface PlaceOrderResponse {
   order: AccountOrder;
   position: AccountPosition | null;
 }
+
+export interface AmendOrderRequest {
+  price: string;
+}

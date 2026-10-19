@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -24,6 +25,7 @@ import type { AuthUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { AppException } from '../common/app.exception.js';
 import { ErrorResponseDto } from '../common/error-response.dto.js';
+import { AmendOrderDto } from './dto/amend-order.dto.js';
 import {
   OrderDto,
   PlaceOrderResponseDto,
@@ -32,6 +34,13 @@ import {
 import { ListOrdersQueryDto, OrderPageDto } from './dto/list-orders.dto.js';
 import { PlaceOrderDto } from './dto/place-order.dto.js';
 import { OrdersService } from './orders.service.js';
+
+const orderIdPipe = new ParseUUIDPipe({
+  exceptionFactory: () =>
+    new AppException('VALIDATION_ERROR', {
+      message: '주문 id 형식이 올바르지 않습니다.',
+    }),
+});
 
 @ApiTags('orders')
 @ApiBearerAuth()
@@ -83,6 +92,46 @@ export class OrdersController {
     };
   }
 
+  @Patch(':id')
+  @ApiOperation({
+    summary: '대기 중인 지정가 주문의 가격 정정',
+    description:
+      '같은 주문의 가격을 바꾼다. 새 가격이 바로 체결될 가격이면 그 자리에서 테이커로 체결하고, 아니면 가격과 묶인 금액만 바꾼다.',
+  })
+  @ApiOkResponse({ type: PlaceOrderResponseDto })
+  @ApiBadRequestResponse({
+    description:
+      'VALIDATION_ERROR, INVALID_ORDER_PRICE, INSUFFICIENT_MARGIN, INSUFFICIENT_LIQUIDITY, REDUCE_ONLY_REJECTED, POSITION_FLIP_NOT_SUPPORTED',
+    type: ErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: '없거나 내 주문이 아님 (NOT_FOUND)',
+    type: ErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description: '이미 체결되거나 취소된 주문 (ORDER_NOT_OPEN)',
+    type: ErrorResponseDto,
+  })
+  @ApiServiceUnavailableResponse({
+    description: '시세가 없거나 지연됨 (MARKET_DATA_UNAVAILABLE)',
+    type: ErrorResponseDto,
+  })
+  async amend(
+    @CurrentUser() user: AuthUser,
+    @Param('id', orderIdPipe) id: string,
+    @Body() dto: AmendOrderDto,
+  ): Promise<PlaceOrderResponseDto> {
+    const { order, position } = await this.ordersService.amend(
+      user.id,
+      id,
+      dto.price,
+    );
+    return {
+      order: OrderDto.from(order),
+      position: position && PositionDto.from(position),
+    };
+  }
+
   @Delete(':id')
   @ApiOperation({
     summary: '대기 중인 지정가 주문 취소',
@@ -103,16 +152,7 @@ export class OrdersController {
   })
   async cancel(
     @CurrentUser() user: AuthUser,
-    @Param(
-      'id',
-      new ParseUUIDPipe({
-        exceptionFactory: () =>
-          new AppException('VALIDATION_ERROR', {
-            message: '주문 id 형식이 올바르지 않습니다.',
-          }),
-      }),
-    )
-    id: string,
+    @Param('id', orderIdPipe) id: string,
   ): Promise<OrderDto> {
     return OrderDto.from(await this.ordersService.cancel(user.id, id));
   }
