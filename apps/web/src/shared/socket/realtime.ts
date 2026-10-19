@@ -1,4 +1,5 @@
 import type {
+  CandleTarget,
   ClientToServerEvents,
   MarketSymbol,
   ServerToClientEvents,
@@ -11,11 +12,18 @@ export type RealtimeSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 const noop = () => undefined;
 
+const candleKeyOf = ({ symbol, interval }: CandleTarget) =>
+  `${symbol}:${interval}`;
+
 export function createRealtime(
   socket: RealtimeSocket,
   deps: { refresh: () => Promise<string> } = { refresh: refreshAccessToken },
 ) {
   const subscriptions = new Map<MarketSymbol, number>();
+  const candleSubscriptions = new Map<
+    string,
+    { target: CandleTarget; count: number }
+  >();
   let tokenAtConnect: string | null = null;
   let retriedAfterAuthError = false;
 
@@ -28,6 +36,9 @@ export function createRealtime(
     retriedAfterAuthError = false;
     for (const symbol of subscriptions.keys()) {
       socket.emit('subscribe', symbol, noop);
+    }
+    for (const { target } of candleSubscriptions.values()) {
+      socket.emit('subscribeCandles', target, noop);
     }
   });
 
@@ -45,7 +56,9 @@ export function createRealtime(
     const loggedIn = state.accessToken !== null;
     if (loggedIn === (prev.accessToken !== null)) return;
     if (socket.active) socket.disconnect().connect();
-    else if (subscriptions.size > 0) socket.connect();
+    else if (subscriptions.size > 0 || candleSubscriptions.size > 0) {
+      socket.connect();
+    }
   });
 
   async function renewAndReconnect() {
@@ -76,5 +89,35 @@ export function createRealtime(
     }
   }
 
-  return { subscribeMarket, unsubscribeMarket, dispose };
+  function subscribeCandles({ symbol, interval }: CandleTarget) {
+    const target = { symbol, interval };
+    const key = candleKeyOf(target);
+    const count = candleSubscriptions.get(key)?.count ?? 0;
+    candleSubscriptions.set(key, { target, count: count + 1 });
+    if (count > 0) return;
+    if (socket.connected) socket.emit('subscribeCandles', target, noop);
+    else if (!socket.active) socket.connect();
+  }
+
+  function unsubscribeCandles(target: CandleTarget) {
+    const key = candleKeyOf(target);
+    const subscription = candleSubscriptions.get(key);
+    if (!subscription) return;
+    if (subscription.count > 1) {
+      subscription.count -= 1;
+      return;
+    }
+    candleSubscriptions.delete(key);
+    if (socket.connected) {
+      socket.emit('unsubscribeCandles', subscription.target, noop);
+    }
+  }
+
+  return {
+    subscribeMarket,
+    unsubscribeMarket,
+    subscribeCandles,
+    unsubscribeCandles,
+    dispose,
+  };
 }

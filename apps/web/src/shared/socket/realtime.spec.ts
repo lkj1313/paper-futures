@@ -120,6 +120,65 @@ describe('종목 구독', () => {
   });
 });
 
+describe('봉 구독', () => {
+  const btc15m = { symbol: 'BTCUSDT', interval: '15m' } as const;
+
+  it('처음 구독하면 연결하고, 연결되면 그 종목·간격의 봉 구독 요청을 보낸다', () => {
+    const { socket, realtime } = setup();
+
+    realtime.subscribeCandles(btc15m);
+
+    expect(socket.connect).toHaveBeenCalledOnce();
+    expect(socket.emitted('subscribeCandles')).toEqual([]);
+
+    socket.serverAccepts();
+
+    expect(socket.emitted('subscribeCandles')).toEqual([btc15m]);
+  });
+
+  it('같은 종목·간격은 한 번만 요청하고 마지막이 떠날 때만 나가며, 간격이 다르면 따로 센다', () => {
+    const { socket, realtime } = setup();
+    socket.serverAccepts();
+
+    realtime.subscribeCandles(btc15m);
+    realtime.subscribeCandles({ ...btc15m });
+    realtime.subscribeCandles({ symbol: 'BTCUSDT', interval: '1h' });
+    expect(socket.emitted('subscribeCandles')).toEqual([
+      btc15m,
+      { symbol: 'BTCUSDT', interval: '1h' },
+    ]);
+
+    realtime.unsubscribeCandles(btc15m);
+    expect(socket.emitted('unsubscribeCandles')).toEqual([]);
+
+    realtime.unsubscribeCandles(btc15m);
+    expect(socket.emitted('unsubscribeCandles')).toEqual([btc15m]);
+  });
+
+  it('다시 연결되면 구독 중인 봉에 다시 들어간다', () => {
+    const { socket, realtime } = setup();
+    realtime.subscribeCandles(btc15m);
+    socket.serverAccepts();
+    socket.emit.mockClear();
+
+    socket.serverDrops();
+    socket.serverAccepts();
+
+    expect(socket.emitted('subscribeCandles')).toEqual([btc15m]);
+  });
+
+  it('봉만 구독 중인데 연결이 멈춰 있으면 로그인할 때 다시 연결한다', () => {
+    const { socket, realtime } = setup();
+    realtime.subscribeCandles(btc15m);
+    socket.serverDrops();
+    socket.connect.mockClear();
+
+    useTokenStore.getState().setAccessToken('token-1');
+
+    expect(socket.connect).toHaveBeenCalledOnce();
+  });
+});
+
 describe('토큰과 다시 연결', () => {
   it('연결할 때마다 그 순간의 토큰을 보낸다', () => {
     const { socket } = setup();
