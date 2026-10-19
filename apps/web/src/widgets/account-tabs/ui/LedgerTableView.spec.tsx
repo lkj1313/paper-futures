@@ -60,10 +60,11 @@ describe('LedgerTableView', () => {
         entry('entry-1', { type: 'REALIZED_PNL' }),
         entry('entry-2', { type: 'LIQUIDATION' }),
         entry('entry-3', { type: 'FUNDING_FEE' }),
+        entry('entry-4', { type: 'DEPOSIT' }),
       ],
     });
 
-    for (const label of ['실현 손익', '강제 청산', '펀딩비']) {
+    for (const label of ['실현 손익', '강제 청산', '펀딩비', '충전']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

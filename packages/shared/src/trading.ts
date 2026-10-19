@@ -29,6 +29,7 @@ export const LedgerEntryType = {
   REALIZED_PNL: 'REALIZED_PNL',
   LIQUIDATION: 'LIQUIDATION',
   FUNDING_FEE: 'FUNDING_FEE',
+  DEPOSIT: 'DEPOSIT',
 } as const;
 export type LedgerEntryType =
   (typeof LedgerEntryType)[keyof typeof LedgerEntryType];
