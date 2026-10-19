@@ -63,7 +63,7 @@ export const ERRORS = {
   },
   ORDER_NOT_OPEN: {
     status: 409,
-    message: '대기 중인 주문만 취소할 수 있습니다.',
+    message: '이미 체결되거나 취소된 주문입니다.',
   },
 
   // 시세

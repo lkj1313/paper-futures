@@ -51,7 +51,7 @@ describe('CancelOrderButton', () => {
           {
             statusCode: 409,
             code: 'ORDER_NOT_OPEN',
-            message: '대기 중인 주문만 취소할 수 있습니다.',
+            message: '이미 체결되거나 취소된 주문입니다.',
           },
           { status: 409 },
         ),
@@ -62,7 +62,7 @@ describe('CancelOrderButton', () => {
     await userEvent.click(screen.getByRole('button', { name: '취소' }));
 
     expect(
-      await screen.findByText('대기 중인 주문만 취소할 수 있습니다.'),
+      await screen.findByText('이미 체결되거나 취소된 주문입니다.'),
     ).toBeInTheDocument();
   });
 
