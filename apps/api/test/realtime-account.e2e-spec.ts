@@ -184,6 +184,29 @@ describe('실시간 내 계정 이벤트 (e2e)', () => {
     expect((await events.wallets).at(-1)?.balance).toBe('9995.019975');
   });
 
+  it('대기 주문 가격을 바꾸면 새 가격의 주문과 묶인 금액이 바뀐 지갑을 받는다', async () => {
+    const token = await signupAndLogin(app);
+    const placed = await order(token, {
+      type: 'LIMIT',
+      side: 'BUY',
+      price: '80000',
+    });
+    const client = await connect(token);
+    const events = collectAccount(client);
+
+    await request(app.getHttpServer())
+      .patch(`/api/orders/${placed.body.order.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ price: '79000' });
+
+    expect(
+      (await events.orders).flatMap((e) => e.orders.map((o) => o.price)),
+    ).toEqual(['79000']);
+    expect((await events.wallets).at(-1)).toMatchObject({
+      openOrderMargin: '791.58',
+    });
+  });
+
   it('충전하면 주문 없이 늘어난 지갑을 받는다', async () => {
     const token = await signupAndLogin(app);
     const client = await connect(token);

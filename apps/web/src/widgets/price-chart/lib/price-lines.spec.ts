@@ -51,6 +51,12 @@ describe('priceLinesOf', () => {
     ]);
   });
 
+  it('포지션 선에는 id가 없어 끌 수 없다', () => {
+    const lines = priceLinesOf('BTCUSDT', BTC_LONG, []);
+
+    expect(lines.map((line) => line.id)).toEqual([undefined, undefined]);
+  });
+
   it('청산가가 0 이하면 청산가 선은 만들지 않는다', () => {
     const lines = priceLinesOf(
       'BTCUSDT',
@@ -76,12 +82,14 @@ describe('priceLinesOf', () => {
 
     expect(lines).toEqual([
       expect.objectContaining({
+        id: 'order-1',
         price: 70000,
         title: '매수 0.002',
         color: UP_COLOR,
         lineStyle: LineStyle.Dotted,
       }),
       expect.objectContaining({
+        id: 'order-2',
         price: 90000,
         title: '닫기 매도 0.010',
         color: DOWN_COLOR,

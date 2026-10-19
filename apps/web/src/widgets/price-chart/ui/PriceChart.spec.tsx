@@ -19,17 +19,25 @@ vi.mock('./PriceChartView', () => ({
     candles,
     failed,
     priceLines,
+    onOrderPriceChange,
   }: {
     symbol: string;
     candles?: unknown[];
     failed?: boolean;
     priceLines?: { title: string }[];
+    onOrderPriceChange?: (id: string, price: string) => Promise<unknown>;
   }) => (
     <>
       <p>
         {symbol} {failed ? '실패' : `봉 ${candles?.length ?? '없음'}`}
       </p>
       <p>가격선: {priceLines?.map((line) => line.title).join(', ')}</p>
+      <button
+        type="button"
+        onClick={() => void onOrderPriceChange?.('order-1', '80000.0')}
+      >
+        선 끌어 놓기
+      </button>
     </>
   ),
 }));
@@ -155,6 +163,43 @@ describe('PriceChart', () => {
     expect(
       await screen.findByText('가격선: 진입 롱, 청산, 매수 0.002'),
     ).toBeInTheDocument();
+  });
+
+  it('주문 선을 끌어 놓으면 그 주문의 정정을 보낸다', async () => {
+    const sent: unknown[] = [];
+    server.use(
+      http.patch('/api/orders/:id', async ({ params, request }) => {
+        sent.push({ id: params.id, body: await request.json() });
+        return HttpResponse.json({
+          order: {
+            id: 'order-1',
+            symbol: 'BTCUSDT',
+            side: 'BUY',
+            type: 'LIMIT',
+            status: 'NEW',
+            qty: '0.002',
+            price: '80000',
+            leverage: 10,
+            reduceOnly: false,
+            reservedMargin: '16.032',
+            avgFillPrice: null,
+            fee: '0',
+            realizedPnl: '0',
+            createdAt: '2026-10-19T00:00:00.000Z',
+            updatedAt: '2026-10-19T00:00:00.000Z',
+          },
+          position: null,
+        });
+      }),
+    );
+    renderWithProviders(<PriceChart symbol="BTCUSDT" />);
+
+    await userEvent.click(screen.getByRole('button', { name: '선 끌어 놓기' }));
+
+    expect(
+      await screen.findByText('주문 가격을 바꿨습니다 (80,000.0)'),
+    ).toBeInTheDocument();
+    expect(sent).toEqual([{ id: 'order-1', body: { price: '80000.0' } }]);
   });
 
   it('캔들을 받지 못하면 실패를 알린다', async () => {

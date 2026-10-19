@@ -53,14 +53,15 @@ export function priceLinesOf(
     if (order.symbol !== symbol || !order.price) continue;
     const side = order.side === 'BUY' ? '매수' : '매도';
     const title = `${order.reduceOnly ? '닫기 ' : ''}${side} ${formatQty(symbol, order.qty)}`;
-    lines.push(
-      line(
+    lines.push({
+      ...line(
         Number(order.price),
         title,
         order.side === 'BUY' ? UP_COLOR : DOWN_COLOR,
         LineStyle.Dotted,
       ),
-    );
+      id: order.id,
+    });
   }
 
   return lines;

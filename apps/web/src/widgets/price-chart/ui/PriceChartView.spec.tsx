@@ -1,5 +1,5 @@
 import type { Candle } from '@paper-futures/shared';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { CandlestickSeries } from 'lightweight-charts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toBar } from '../lib/chart-data';
@@ -11,14 +11,20 @@ const fake = vi.hoisted(() => {
     update: vi.fn(),
     applyOptions: vi.fn(),
     priceScale: () => ({ applyOptions: vi.fn() }),
-    createPriceLine: vi.fn((options: { title: string }) => options.title),
+    createPriceLine: vi.fn((options: { title: string }) => ({
+      title: options.title,
+      applyOptions: vi.fn(),
+    })),
     removePriceLine: vi.fn(),
+    priceToCoordinate: vi.fn((price: number) => (90000 - price) / 10),
+    coordinateToPrice: vi.fn((y: number) => 90000 - y * 10),
   });
   const bars = series();
   const volume = series();
   const chart = {
     addSeries: vi.fn(),
     remove: vi.fn(),
+    applyOptions: vi.fn(),
     timeScale: () => ({ scrollToRealTime: vi.fn() }),
   };
   return { bars, volume, chart };
@@ -128,10 +134,9 @@ describe('PriceChartView', () => {
       />,
     );
 
-    expect(fake.bars.removePriceLine.mock.calls).toEqual([
-      ['진입 롱'],
-      ['청산'],
-    ]);
+    expect(
+      fake.bars.removePriceLine.mock.calls.map(([line]) => line.title),
+    ).toEqual(['진입 롱', '청산']);
     expect(fake.bars.createPriceLine).toHaveBeenLastCalledWith(order);
   });
 
@@ -155,6 +160,107 @@ describe('PriceChartView', () => {
 
     expect(fake.bars.createPriceLine).toHaveBeenCalledOnce();
     expect(fake.bars.removePriceLine).not.toHaveBeenCalled();
+  });
+
+  describe('주문 선 끌기', () => {
+    const entry = { price: 82000, title: '진입 롱' };
+    const order = { id: 'order-1', price: 81000, title: '매수 0.002' };
+    const lineTitled = (title: string) =>
+      fake.bars.createPriceLine.mock.results.find(
+        (result) => result.value.title === title,
+      )!.value as { applyOptions: ReturnType<typeof vi.fn> };
+
+    function renderDraggable(onOrderPriceChange = vi.fn()) {
+      const view = render(
+        <PriceChartView
+          symbol="BTCUSDT"
+          candles={[candle(60_000, '83100')]}
+          priceLines={[entry, order]}
+          onOrderPriceChange={onOrderPriceChange}
+        />,
+      );
+      return {
+        onOrderPriceChange,
+        wrapper: view.container.firstElementChild as HTMLElement,
+      };
+    }
+
+    it('주문 선을 잡아 끌면 선이 호가 단위로 따라오고, 놓으면 새 가격으로 정정을 요청한다', () => {
+      const { onOrderPriceChange, wrapper } = renderDraggable(
+        vi.fn().mockResolvedValue(undefined),
+      );
+
+      fireEvent.pointerDown(wrapper, { clientY: 902 });
+      expect(fake.chart.applyOptions).toHaveBeenLastCalledWith({
+        handleScroll: false,
+        handleScale: false,
+      });
+
+      fireEvent.pointerMove(window, { clientY: 999.673 });
+      expect(lineTitled('매수 0.002').applyOptions).toHaveBeenLastCalledWith({
+        price: 80003.3,
+      });
+
+      fireEvent.pointerUp(window);
+      expect(onOrderPriceChange).toHaveBeenCalledExactlyOnceWith(
+        'order-1',
+        '80003.3',
+      );
+      expect(fake.chart.applyOptions).toHaveBeenLastCalledWith({
+        handleScroll: true,
+        handleScale: true,
+      });
+    });
+
+    it('정정이 실패하면 선을 원래 가격으로 되돌린다', async () => {
+      const { wrapper } = renderDraggable(
+        vi.fn().mockRejectedValue(new Error('fail')),
+      );
+
+      fireEvent.pointerDown(wrapper, { clientY: 900 });
+      fireEvent.pointerMove(window, { clientY: 1000 });
+      fireEvent.pointerUp(window);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(lineTitled('매수 0.002').applyOptions).toHaveBeenLastCalledWith({
+        price: 81000,
+      });
+    });
+
+    it('포지션 선은 잡히지 않고, 끌지 않고 놓으면 정정하지 않는다', () => {
+      const { onOrderPriceChange, wrapper } = renderDraggable();
+
+      fireEvent.pointerDown(wrapper, { clientY: 800 });
+      fireEvent.pointerMove(window, { clientY: 850 });
+      fireEvent.pointerUp(window);
+      expect(fake.chart.applyOptions).not.toHaveBeenCalled();
+
+      fireEvent.pointerDown(wrapper, { clientY: 900 });
+      fireEvent.pointerUp(window);
+      expect(onOrderPriceChange).not.toHaveBeenCalled();
+    });
+
+    it('끌었다가 원래 가격으로 되돌려 놓으면 정정하지 않는다', () => {
+      const { onOrderPriceChange, wrapper } = renderDraggable();
+
+      fireEvent.pointerDown(wrapper, { clientY: 900 });
+      fireEvent.pointerMove(window, { clientY: 950 });
+      fireEvent.pointerMove(window, { clientY: 900 });
+      fireEvent.pointerUp(window);
+
+      expect(onOrderPriceChange).not.toHaveBeenCalled();
+    });
+
+    it('주문 선 위에 올리면 위아래 화살표 커서로 바뀐다', () => {
+      const { wrapper } = renderDraggable();
+
+      fireEvent.pointerMove(wrapper, { clientY: 903 });
+      expect(wrapper.style.cursor).toBe('ns-resize');
+
+      fireEvent.pointerMove(wrapper, { clientY: 800 });
+      expect(wrapper.style.cursor).toBe('');
+    });
   });
 
   it('화면에서 사라지면 차트를 지운다', () => {
