@@ -19,6 +19,7 @@ const TYPE_LABEL: Record<LedgerEntryType, string> = {
   REALIZED_PNL: '실현 손익',
   LIQUIDATION: '강제 청산',
   FUNDING_FEE: '펀딩비',
+  DEPOSIT: '충전',
 };
 
 export interface LedgerTableViewProps extends LoadMoreProps {

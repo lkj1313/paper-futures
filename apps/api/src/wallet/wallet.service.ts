@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { type Decimal, SIGNUP_BONUS_USDT } from '@paper-futures/shared';
+import {
+  checkDepositAmount,
+  type Decimal,
+  SIGNUP_BONUS_USDT,
+  toDecimal,
+} from '@paper-futures/shared';
+import { AccountEventsService } from '../account-events/account-events.service.js';
 import { AppException } from '../common/app.exception.js';
 import {
   type CursorPageQueryDto,
@@ -19,7 +25,10 @@ export interface LockedWallet {
 
 @Injectable()
 export class WalletService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: AccountEventsService,
+  ) {}
 
   /**
    * 가입 보너스를 넣은 지갑과 첫 원장 기록을 만든다.
@@ -134,6 +143,22 @@ export class WalletService {
       await this.getOpenOrderMargin(userId, tx, excludeOrderId),
     );
     return wallet.balance.sub(usedMargin).sub(openOrderMargin);
+  }
+
+  async deposit(userId: string, amount: string) {
+    const problem = checkDepositAmount(amount);
+    if (problem) {
+      throw new AppException('INVALID_DEPOSIT_AMOUNT', { message: problem });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const wallet = await this.lockByUserId(tx, userId);
+      await this.recordEntries(tx, wallet, [
+        { type: LedgerEntryType.DEPOSIT, amount: toDecimal(amount) },
+      ]);
+    });
+    await this.events.notify(userId);
+    return this.getSummary(userId);
   }
 
   /** 지갑 잔고, 사용 중 증거금, 대기 주문에 묶인 금액, 주문 가능 금액 */

@@ -38,6 +38,10 @@ export const ERRORS = {
     message: '주문 가격이 올바르지 않습니다.',
   },
   INVALID_LEVERAGE: { status: 400, message: '레버리지가 올바르지 않습니다.' },
+  INVALID_DEPOSIT_AMOUNT: {
+    status: 400,
+    message: '충전 금액이 올바르지 않습니다.',
+  },
   LEVERAGE_LOCKED: {
     status: 409,
     message:

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { DepositControl } from '@/features/deposit';
 import { WalletSummaryView } from './WalletSummaryView';
 
 const meta = {
@@ -26,6 +27,20 @@ export const WithPosition: Story = {
       openOrderMargin: '10.02',
       availableBalance: '9904.264975',
     },
+  },
+};
+
+export const WithDeposit: Story = {
+  name: '충전 버튼',
+  args: {
+    wallet: {
+      asset: 'USDT',
+      balance: '10000',
+      usedMargin: '0',
+      openOrderMargin: '0',
+      availableBalance: '10000',
+    },
+    action: <DepositControl onConfirm={async () => undefined} />,
   },
 };
 

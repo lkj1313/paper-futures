@@ -184,6 +184,23 @@ describe('실시간 내 계정 이벤트 (e2e)', () => {
     expect((await events.wallets).at(-1)?.balance).toBe('9995.019975');
   });
 
+  it('충전하면 주문 없이 늘어난 지갑을 받는다', async () => {
+    const token = await signupAndLogin(app);
+    const client = await connect(token);
+    const events = collectAccount(client);
+
+    await request(app.getHttpServer())
+      .post('/api/wallet/deposit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: '2500' });
+
+    expect(await events.orders).toEqual([]);
+    expect((await events.wallets).at(-1)).toMatchObject({
+      balance: '12500',
+      availableBalance: '12500',
+    });
+  });
+
   it('남의 계정 이벤트는 받지 않는다 (토큰 없는 연결도 받지 않는다)', async () => {
     const alice = await connect(await signupAndLogin(app, 'alice@test.com'));
     const anonymous = await connect();

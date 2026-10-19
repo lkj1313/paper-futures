@@ -1,4 +1,5 @@
 import type { AccountWallet } from '@paper-futures/shared';
+import type { ReactNode } from 'react';
 import { formatUsdt } from '@/shared/lib/format';
 
 const ROWS = [
@@ -8,10 +9,19 @@ const ROWS = [
   { label: '대기 주문 증거금', key: 'openOrderMargin' },
 ] as const;
 
-export function WalletSummaryView({ wallet }: { wallet?: AccountWallet }) {
+export function WalletSummaryView({
+  wallet,
+  action,
+}: {
+  wallet?: AccountWallet;
+  action?: ReactNode;
+}) {
   return (
     <section className="flex flex-col gap-2 p-3 text-xs">
-      <h2 className="text-sm font-medium">지갑</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium">지갑</h2>
+        {action}
+      </div>
       <dl className="flex flex-col gap-1.5">
         {ROWS.map(({ label, key }) => (
           <div key={key} className="flex justify-between">
